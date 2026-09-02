@@ -28,22 +28,45 @@ const MODELS = [
   'gemini-3.5-flash-lite',
 ]
 
-async function generateWithFallback(prompt, message) {
+async function generateWithFallback(
+  prompt,
+  message,
+  history = []
+) {
   let lastError = null
+
+  const conversation = history
+    .map(
+      (item) =>
+        `${item.role === 'user' ? 'USER' : 'REALM AI'}: ${item.content}`
+    )
+    .join('\n\n')
+
+  const fullMessage = conversation
+    ? `CONVERSATION HISTORY:
+
+${conversation}
+
+CURRENT USER MESSAGE:
+
+${message}`
+    : message
 
   for (const model of MODELS) {
     try {
       console.log(`Trying Gemini model: ${model}`)
 
       const response = await ai.models.generateContent({
-  model,
-  contents: message,
-  config: {
-    systemInstruction: prompt,
-  },
-})
+        model,
+        contents: fullMessage,
+        config: {
+          systemInstruction: prompt,
+        },
+      })
 
-      console.log(`Gemini response received from: ${model}`)
+      console.log(
+        `Gemini response received from: ${model}`
+      )
 
       return response.text
     } catch (error) {
@@ -65,7 +88,11 @@ async function generateWithFallback(prompt, message) {
 
 app.post('/api/ai', async (req, res) => {
   try {
-    const { prompt, message } = req.body
+    const {
+      prompt,
+      message,
+      history = [],
+    } = req.body
 
     if (!prompt || !message) {
       return res.status(400).json({
@@ -73,9 +100,16 @@ app.post('/api/ai', async (req, res) => {
       })
     }
 
+    if (!Array.isArray(history)) {
+      return res.status(400).json({
+        error: 'Conversation history must be an array.',
+      })
+    }
+
     const response = await generateWithFallback(
       prompt,
-      message
+      message,
+      history
     )
 
     res.json({

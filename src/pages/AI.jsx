@@ -42,9 +42,10 @@ function AI() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            prompt: realmPrompt,
-            message: trimmedMessage,
-          }),
+  prompt: realmPrompt,
+  message: trimmedMessage,
+  history: messages,
+}),
         }
       )
 

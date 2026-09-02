@@ -10,13 +10,14 @@ function AI() {
 
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState([])
+  const [isLoading, setIsLoading] = useState(false)
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
 
     const trimmedMessage = message.trim()
 
-    if (!trimmedMessage) return
+    if (!trimmedMessage || isLoading) return
 
     const userMessage = {
       id: Date.now(),
@@ -24,22 +25,64 @@ function AI() {
       content: trimmedMessage,
     }
 
-    const assistantMessage = {
-      id: Date.now() + 1,
-      role: 'assistant',
-      content: generateDemoResponse(
-        trimmedMessage,
-        aiContext
-      ),
-    }
-
     setMessages((currentMessages) => [
       ...currentMessages,
       userMessage,
-      assistantMessage,
     ])
 
     setMessage('')
+    setIsLoading(true)
+
+    try {
+      const response = await fetch(
+        'http://localhost:3001/api/ai',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt: realmPrompt,
+            message: trimmedMessage,
+          }),
+        }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || 'REALM AI request failed.'
+        )
+      }
+
+      const assistantMessage = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: data.response,
+      }
+
+      setMessages((currentMessages) => [
+        ...currentMessages,
+        assistantMessage,
+      ])
+    } catch (error) {
+      console.error('REALM AI error:', error)
+
+      const errorMessage = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content:
+          'REALM AI could not respond right now. Please try again.',
+      }
+
+      setMessages((currentMessages) => [
+        ...currentMessages,
+        errorMessage,
+      ])
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -89,6 +132,16 @@ function AI() {
                   <p>{item.content}</p>
                 </div>
               ))}
+
+              {isLoading && (
+                <div className="ai-message ai-message-assistant">
+                  <span className="ai-message-role">
+                    REALM AI
+                  </span>
+
+                  <p>Thinking...</p>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -105,10 +158,14 @@ function AI() {
             }
             placeholder="Ask REALM AI..."
             aria-label="Ask REALM AI"
+            disabled={isLoading}
           />
 
-          <button type="submit">
-            Send
+          <button
+            type="submit"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Thinking...' : 'Send'}
           </button>
         </form>
       </section>
@@ -142,55 +199,6 @@ function AI() {
       </section>
     </main>
   )
-}
-
-function generateDemoResponse(message, aiContext) {
-  const lowerMessage = message.toLowerCase()
-
-  if (
-    aiContext.type === 'world' &&
-    aiContext.data?.world
-  ) {
-    const world = aiContext.data.world
-
-    if (
-      lowerMessage.includes('member') ||
-      lowerMessage.includes('people')
-    ) {
-      return `${world.name} currently has ${world.members.toLocaleString()} members.`
-    }
-
-    if (
-      lowerMessage.includes('creation') ||
-      lowerMessage.includes('content')
-    ) {
-      return `${world.name} currently contains ${world.creations.toLocaleString()} Creations.`
-    }
-
-    return `You're currently exploring the ${world.name} World. I have access to its public World information and public Creations.`
-  }
-
-  if (
-    aiContext.type === 'creation' &&
-    aiContext.data?.creation
-  ) {
-    const creation = aiContext.data.creation
-
-    if (
-      lowerMessage.includes('like') ||
-      lowerMessage.includes('popular')
-    ) {
-      return `"${creation.title}" currently has ${creation.likes} likes and ${creation.comments} comments.`
-    }
-
-    return `You're currently exploring "${creation.title}", created by ${creation.creator.name}.`
-  }
-
-  if (aiContext.type === 'discovery') {
-   return "You're using Discovery AI. I can help you explore the public Worlds and Creations currently available across REALM."
-  }
-
-  return 'You are currently using Global REALM AI. I can help you explore REALM, its Worlds, Creations, and communities.'
 }
 
 export default AI

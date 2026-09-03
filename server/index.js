@@ -129,14 +129,28 @@ async function generateWithFallback(
     .join('\n\n')
 
   const fullMessage = conversation
-    ? `CONVERSATION HISTORY:
+  ? `CONVERSATION HISTORY:
 
 ${conversation}
 
+END CONVERSATION HISTORY.
+
 CURRENT USER MESSAGE:
 
+${message}
+
+INSTRUCTION:
+Use the conversation history to understand references,
+follow-up questions, and previously established subjects.
+
+Maintain continuity with the conversation, but treat the
+current user message as the user's latest request.
+
+Do not invent information that is not present in the
+conversation history or the active REALM context.`
+  : `CURRENT USER MESSAGE:
+
 ${message}`
-    : message
 
   for (const model of MODELS) {
     try {
@@ -164,12 +178,13 @@ ${message}`
       )
 
       // Only fall back when Gemini is temporarily overloaded
+            // Fall back when Gemini is temporarily overloaded or rate-limited
       if (
-  error.status !== 503 &&
-  error.status !== 429
-) {
-  throw error
-}
+        error.status !== 503 &&
+        error.status !== 429
+      ) {
+        throw error
+      }
     }
   }
 
@@ -277,15 +292,29 @@ app.post('/api/ai', async (req, res) => {
       conversationId
     )
 
-    res.json({
+        res.json({
       response,
     })
   } catch (error) {
     console.error('REALM AI error:', error)
 
+    if (error.status === 429) {
+      return res.status(429).json({
+        error:
+          'REALM AI is temporarily busy due to API usage limits. Please try again shortly.',
+      })
+    }
+
+    if (error.status === 503) {
+      return res.status(503).json({
+        error:
+          'REALM AI is temporarily unavailable. Please try again shortly.',
+      })
+    }
+
     res.status(500).json({
       error:
-        'REALM AI is temporarily unavailable. Please try again.',
+        'REALM AI encountered an unexpected error. Please try again.',
     })
   }
 })

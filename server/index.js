@@ -164,9 +164,12 @@ ${message}`
       )
 
       // Only fall back when Gemini is temporarily overloaded
-      if (error.status !== 503) {
-        throw error
-      }
+      if (
+  error.status !== 503 &&
+  error.status !== 429
+) {
+  throw error
+}
     }
   }
 

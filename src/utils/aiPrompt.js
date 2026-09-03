@@ -34,6 +34,53 @@ REALM AI GOVERNANCE RULES:
    Creation and its parent World.
 `
 
+function buildGlobalContext(data) {
+  if (!data) return ''
+
+  const publicWorlds = data.worlds || []
+  const publicCreations = data.creations || []
+
+  const worldContext = publicWorlds.length
+    ? publicWorlds
+        .map(
+          (world) => `
+- ${world.name}
+  Category: ${world.category}
+  Description: ${world.description}
+  Members: ${world.members}
+  Creations: ${world.creations}
+  Visibility: ${world.visibility}
+`
+        )
+        .join('')
+    : 'No public Worlds are currently available.'
+
+  const creationContext = publicCreations.length
+    ? publicCreations
+        .map(
+          (creation) => `
+- ${creation.title}
+  Creator: ${creation.creator.name} (@${creation.creator.username})
+  World: ${creation.worldSlug}
+  Likes: ${creation.likes}
+  Comments: ${creation.comments}
+  Summary: ${creation.excerpt}
+`
+        )
+        .join('')
+    : 'No public Creations are currently available.'
+
+  return `
+PUBLIC REALM PLATFORM DATA:
+
+PUBLIC WORLDS:
+${worldContext}
+
+PUBLIC CREATIONS:
+${creationContext}
+`
+}
+
 function buildWorldContext(data) {
   if (!data?.world) return ''
 
@@ -108,17 +155,17 @@ function buildDiscoveryContext(data) {
     : 'No public Worlds are currently available.'
 
   const creationContext = publicCreations.length
-    ? publicCreations
-        .map(
-          (creation) => `
-- ${creation.title}
-  Creator: ${creation.creator.name} (@${creation.creator.username})
-  World: ${creation.worldSlug}
-  Summary: ${creation.excerpt}
+  ? publicCreations
+      .map(
+        (creation, index) => `
+${index + 1}. ${creation.title}
+   Creator: ${creation.creator.name} (@${creation.creator.username})
+   World: ${creation.worldSlug}
+   Summary: ${creation.excerpt}
 `
-        )
-        .join('')
-    : 'No public Creations are currently available.'
+      )
+      .join('')
+  : 'No public Creations are currently available.'
 
   return `
 PUBLIC WORLDS AVAILABLE FOR DISCOVERY:
@@ -126,6 +173,24 @@ ${worldContext}
 
 PUBLIC CREATIONS AVAILABLE FOR DISCOVERY:
 ${creationContext}
+
+DISCOVERY RANKING:
+
+The Creations above are ordered according to REALM's deterministic
+discovery ranking system.
+
+The first Creation is the highest-ranked available Creation,
+followed by the second, third, and subsequent Creations.
+
+When a user asks what they should check out, what Creation they should
+read first, or asks for recommendations without specifying a topic,
+prefer the highest-ranked Creations in this order.
+
+Do not replace REALM's ranking with a personal or subjective ranking.
+
+If the user specifies an interest or topic, use the ranked list to find
+the most relevant Creation for that interest while preserving the
+REALM discovery ranking as the primary ordering signal.
 `
 }
 
@@ -134,16 +199,28 @@ export function buildREALMPrompt(searchParams) {
 
   let contextualInformation = ''
 
+  if (aiContext.type === 'global') {
+    contextualInformation = buildGlobalContext(
+      aiContext.data
+    )
+  }
+
   if (aiContext.type === 'world') {
-    contextualInformation = buildWorldContext(aiContext.data)
+    contextualInformation = buildWorldContext(
+      aiContext.data
+    )
   }
 
   if (aiContext.type === 'creation') {
-    contextualInformation = buildCreationContext(aiContext.data)
+    contextualInformation = buildCreationContext(
+      aiContext.data
+    )
   }
 
   if (aiContext.type === 'discovery') {
-    contextualInformation = buildDiscoveryContext(aiContext.data)
+    contextualInformation = buildDiscoveryContext(
+      aiContext.data
+    )
   }
 
   return `

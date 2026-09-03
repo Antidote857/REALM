@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { getAIContext } from '../utils/aiContext'
 import { buildREALMPrompt } from '../utils/aiPrompt'
@@ -11,13 +11,104 @@ function AI() {
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState([])
   const [isLoading, setIsLoading] = useState(false)
+  const [conversationId, setConversationId] = useState(null)
+
+  const contextKey = searchParams.toString()
+
+ useEffect(() => {
+  let isActive = true
+
+  async function loadConversation() {
+    setMessages([])
+    setMessage('')
+    setConversationId(null)
+    setIsLoading(false)
+
+    const storageKey =
+      `realm-ai-conversation:${contextKey || 'global'}`
+
+    const savedConversationId =
+      localStorage.getItem(storageKey)
+
+    try {
+      if (savedConversationId) {
+        const response = await fetch(
+          `http://localhost:3001/api/conversations/${savedConversationId}`
+        )
+
+        if (response.ok) {
+          const conversation = await response.json()
+
+          if (isActive) {
+            setConversationId(conversation.id)
+
+            setMessages(
+              conversation.messages.map((item) => ({
+                id: `${item.id}-${item.created_at}`,
+                role: item.role,
+                content: item.content,
+              }))
+            )
+          }
+
+          return
+        }
+
+        localStorage.removeItem(storageKey)
+      }
+
+      const response = await fetch(
+        'http://localhost:3001/api/conversations',
+        {
+          method: 'POST',
+        }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || 'Could not create conversation.'
+        )
+      }
+
+      if (isActive) {
+        setConversationId(data.conversationId)
+
+        localStorage.setItem(
+          storageKey,
+          data.conversationId
+        )
+      }
+    } catch (error) {
+      if (isActive) {
+        console.error(
+          'REALM conversation error:',
+          error
+        )
+      }
+    }
+  }
+
+  loadConversation()
+
+  return () => {
+    isActive = false
+  }
+}, [contextKey])
 
   async function handleSubmit(event) {
     event.preventDefault()
 
     const trimmedMessage = message.trim()
 
-    if (!trimmedMessage || isLoading) return
+    if (
+      !trimmedMessage ||
+      isLoading ||
+      !conversationId
+    ) {
+      return
+    }
 
     const userMessage = {
       id: Date.now(),
@@ -42,10 +133,10 @@ function AI() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-  prompt: realmPrompt,
-  message: trimmedMessage,
-  history: messages,
-}),
+            prompt: realmPrompt,
+            message: trimmedMessage,
+            conversationId,
+          }),
         }
       )
 
@@ -159,12 +250,12 @@ function AI() {
             }
             placeholder="Ask REALM AI..."
             aria-label="Ask REALM AI"
-            disabled={isLoading}
+            disabled={isLoading || !conversationId}
           />
 
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || !conversationId}
           >
             {isLoading ? 'Thinking...' : 'Send'}
           </button>

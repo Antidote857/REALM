@@ -1,12 +1,12 @@
 import { worlds } from '../data/worlds'
 import { creations } from '../data/creations'
+import { discoverCreations } from './discovery'
 
 export function getAIContext(searchParams) {
   const context = searchParams.get('context')
   const slug = searchParams.get('slug')
   const creationId = searchParams.get('id')
 
-  // GLOBAL
   if (!context || context === 'global') {
     return {
       type: 'global',
@@ -14,11 +14,17 @@ export function getAIContext(searchParams) {
       title: 'REALM AI',
       description:
         'AI that understands REALM, its Worlds, Creations, and communities.',
-      data: null,
+      data: {
+        worlds: worlds.filter(
+          (world) => world.visibility === 'public'
+        ),
+        creations: creations.filter(
+          (creation) => creation.visibility === 'public'
+        ),
+      },
     }
   }
 
-  // WORLD
   if (context === 'world') {
     const world = worlds.find((item) => item.slug === slug)
 
@@ -29,7 +35,14 @@ export function getAIContext(searchParams) {
         title: 'REALM AI',
         description:
           'The requested World could not be found. Returning to the global REALM context.',
-        data: null,
+        data: {
+          worlds: worlds.filter(
+            (world) => world.visibility === 'public'
+          ),
+          creations: creations.filter(
+            (creation) => creation.visibility === 'public'
+          ),
+        },
       }
     }
 
@@ -51,7 +64,6 @@ export function getAIContext(searchParams) {
     }
   }
 
-  // CREATION
   if (context === 'creation') {
     const creation = creations.find(
       (item) => item.id === creationId
@@ -64,7 +76,14 @@ export function getAIContext(searchParams) {
         title: 'REALM AI',
         description:
           'The requested Creation could not be found. Returning to the global REALM context.',
-        data: null,
+        data: {
+          worlds: worlds.filter(
+            (world) => world.visibility === 'public'
+          ),
+          creations: creations.filter(
+            (creation) => creation.visibility === 'public'
+          ),
+        },
       }
     }
 
@@ -84,32 +103,43 @@ export function getAIContext(searchParams) {
     }
   }
 
-  // DISCOVERY
   if (context === 'discovery') {
-    return {
-      type: 'discovery',
-      label: 'DISCOVERY',
-      title: 'Discovery AI',
-      description:
-        'AI focused on helping people discover Worlds and Creations across REALM.',
-      data: {
-        worlds: worlds.filter(
-          (world) => world.visibility === 'public'
-        ),
-        creations: creations.filter(
-          (creation) => creation.visibility === 'public'
-        ),
-      },
-    }
-  }
+  const publicWorlds = worlds.filter(
+    (world) => world.visibility === 'public'
+  )
 
-  // UNKNOWN CONTEXT
+  const publicCreations = creations.filter(
+    (creation) => creation.visibility === 'public'
+  )
+
+  const rankedCreations =
+    discoverCreations(publicCreations)
+
+  return {
+    type: 'discovery',
+    label: 'DISCOVERY',
+    title: 'Discovery AI',
+    description:
+      'AI focused on helping people discover Worlds and Creations across REALM.',
+    data: {
+      worlds: publicWorlds,
+      creations: rankedCreations,
+    },
+  }
+}
   return {
     type: 'global',
     label: 'GLOBAL',
     title: 'REALM AI',
     description:
       'Unknown AI context. Returning to the global REALM context.',
-    data: null,
+    data: {
+      worlds: worlds.filter(
+        (world) => world.visibility === 'public'
+      ),
+      creations: creations.filter(
+        (creation) => creation.visibility === 'public'
+      ),
+    },
   }
 }

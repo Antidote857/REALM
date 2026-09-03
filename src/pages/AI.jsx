@@ -58,11 +58,18 @@ function AI() {
       }
 
       const response = await fetch(
-        'http://localhost:3001/api/conversations',
-        {
-          method: 'POST',
-        }
-      )
+  'http://localhost:3001/api/conversations',
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contextKey:
+        contextKey || 'global',
+    }),
+  }
+)
 
       const data = await response.json()
 
@@ -133,10 +140,12 @@ function AI() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            prompt: realmPrompt,
-            message: trimmedMessage,
-            conversationId,
-          }),
+  prompt: realmPrompt,
+  message: trimmedMessage,
+  conversationId,
+  contextKey:
+    contextKey || 'global',
+}),
         }
       )
 

@@ -28,18 +28,24 @@ app.get('/api/health', (req, res) => {
 // Create a new conversation
 app.post('/api/conversations', (req, res) => {
   try {
+    const {
+      contextKey = 'global',
+    } = req.body
+
     const conversationId = crypto.randomUUID()
     const now = new Date().toISOString()
 
     db.prepare(`
       INSERT INTO conversations (
         id,
+        context_key,
         created_at,
         updated_at
       )
-      VALUES (?, ?, ?)
+      VALUES (?, ?, ?, ?)
     `).run(
       conversationId,
+      contextKey,
       now,
       now
     )
@@ -129,7 +135,7 @@ async function generateWithFallback(
     .join('\n\n')
 
   const fullMessage = conversation
-  ? `CONVERSATION HISTORY:
+    ? `CONVERSATION HISTORY:
 
 ${conversation}
 
@@ -148,7 +154,7 @@ current user message as the user's latest request.
 
 Do not invent information that is not present in the
 conversation history or the active REALM context.`
-  : `CURRENT USER MESSAGE:
+    : `CURRENT USER MESSAGE:
 
 ${message}`
 
@@ -177,8 +183,7 @@ ${message}`
         error.status || error.message
       )
 
-      // Only fall back when Gemini is temporarily overloaded
-            // Fall back when Gemini is temporarily overloaded or rate-limited
+      // Fall back when Gemini is temporarily overloaded or rate-limited
       if (
         error.status !== 503 &&
         error.status !== 429
@@ -198,6 +203,7 @@ app.post('/api/ai', async (req, res) => {
       prompt,
       message,
       conversationId,
+      contextKey = 'global',
     } = req.body
 
     // Validate required fields
@@ -218,6 +224,7 @@ app.post('/api/ai', async (req, res) => {
     const conversation = db.prepare(`
       SELECT
         id,
+        context_key,
         created_at,
         updated_at
       FROM conversations
@@ -227,6 +234,14 @@ app.post('/api/ai', async (req, res) => {
     if (!conversation) {
       return res.status(404).json({
         error: 'Conversation not found.',
+      })
+    }
+
+    // Prevent a conversation from being used in a different AI context
+    if (conversation.context_key !== contextKey) {
+      return res.status(409).json({
+        error:
+          'This conversation belongs to a different REALM AI context.',
       })
     }
 
@@ -292,7 +307,7 @@ app.post('/api/ai', async (req, res) => {
       conversationId
     )
 
-        res.json({
+    res.json({
       response,
     })
   } catch (error) {

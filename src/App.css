@@ -4651,3 +4651,68 @@ button {
   background: hsl(var(--primary) / 0.12);
 }
 
+/* =========================================================
+   CREATION PAGE — ACTIONS
+   ========================================================= */
+
+.creation-page-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.creation-edit-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.025);
+  color: #bfc3cc;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.creation-edit-button:hover {
+  background: rgba(255, 255, 255, 0.055);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.creation-edit-button svg {
+  color: hsl(var(--primary));
+}
+
+/* =========================================================
+   CREATION HEADER — EDIT BUTTON SPACING
+   ========================================================= */
+
+.creation-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 40px;
+}
+
+.creation-page-header > div:first-child {
+  min-width: 0;
+}
+
+.creation-page-actions {
+  margin-left: auto;
+  padding-top: 8px;
+  flex-shrink: 0;
+}
+

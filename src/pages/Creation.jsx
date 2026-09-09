@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
+import { Pencil } from 'lucide-react'
 import { getCreationBySlug } from '../data/creationStore'
 import { getWorldBySlug } from '../data/worldStore'
 
@@ -25,30 +26,41 @@ function Creation() {
 
   return (
     <article className="creation-page">
-      <header className="creation-page-header">
-        <div>
-          <span className="eyebrow">
-            {world?.name || 'WORLD'}
-          </span>
+     <header className="creation-page-header">
+  <div>
+    <span className="eyebrow">
+      {world?.name || 'WORLD'}
+    </span>
 
-          <h1>{creation.title}</h1>
+    <h1>{creation.title}</h1>
 
-          <div className="creation-page-author">
-            <div className="creator-avatar">
-              {creation.creator?.name?.charAt(0) || 'Y'}
-            </div>
+    <div className="creation-page-author">
+      <div className="creator-avatar">
+        {creation.creator?.name?.charAt(0) || 'Y'}
+      </div>
 
-            <div>
-              <strong>
-                {creation.creator?.name || 'You'}
-              </strong>
+      <div>
+        <strong>
+          {creation.creator?.name || 'You'}
+        </strong>
 
-              <span>
-                @{creation.creator?.username || 'you'}
-              </span>
-            </div>
-          </div>
-        </div>
+        <span>
+          @{creation.creator?.username || 'you'}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div className="creation-page-actions">
+    <Link
+      to={`/creation/${creation.slug}/edit`}
+      className="creation-edit-button"
+    >
+      <Pencil size={15} strokeWidth={1.8} />
+      <span>Edit Creation</span>
+    </Link>
+  </div>
+
       </header>
 
       {/* Topics */}

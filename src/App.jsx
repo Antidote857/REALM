@@ -23,6 +23,7 @@ import Settings from './pages/Settings'
 import CreateHub from './pages/CreateHub'
 import CreateWorld from './pages/CreateWorld'
 import CreateCreation from './pages/creation/CreateCreation'
+import EditCreation from './pages/creation/EditCreation'
 
 function RealmLogo() {
   return (
@@ -192,6 +193,11 @@ function App() {
                 path="/creation/:slug"
                 element={<Creation />}
               />
+
+              <Route
+  path="/creation/:slug/edit"
+  element={<EditCreation />}
+/>
 
               {/* AI */}
               <Route

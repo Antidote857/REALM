@@ -4432,3 +4432,90 @@ button {
   border-color: hsl(var(--primary) / 0.55);
   background: hsl(var(--primary) / 0.12);
 }
+
+/* =========================================================
+   EXPLORE — SEARCH
+   ========================================================= */
+
+.explore-search {
+  width: min(100%, 620px);
+  margin-top: 30px;
+}
+
+.explore-search input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.025);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 12px;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.explore-search input::placeholder {
+  color: #626671;
+}
+
+.explore-search input:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.explore-search input:focus {
+  border-color: hsl(var(--primary) / 0.45);
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.06);
+}
+
+/* =========================================================
+   EXPLORE — CATEGORY FILTERS
+   ========================================================= */
+
+.explore-categories {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.category-control {
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  background: transparent;
+  color: #696d78;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.035em;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.category-control:hover {
+  border-color: rgba(255, 255, 255, 0.13);
+  background: rgba(255, 255, 255, 0.02);
+  color: #bfc3cc;
+}
+
+.category-control.active {
+  border-color: hsl(var(--primary) / 0.35);
+  background: hsl(var(--primary) / 0.07);
+  color: #ffffff;
+}
+
+.category-control.active:hover {
+  border-color: hsl(var(--primary) / 0.5);
+  background: hsl(var(--primary) / 0.1);
+}

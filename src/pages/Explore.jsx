@@ -2,6 +2,11 @@ import { useState } from 'react'
 import {
   discoverCreations,
   discoverWorlds,
+  filterCreationsByCategory,
+  filterWorldsByCategory,
+  getWorldCategories,
+  searchCreations,
+  searchWorlds,
   sortCreationsByMode,
   sortWorldsByMode,
 } from '../utils/discovery'
@@ -33,8 +38,17 @@ function Explore() {
   const [mode, setMode] =
     useState('recommended')
 
+  const [searchQuery, setSearchQuery] =
+    useState('')
+
+  const [category, setCategory] =
+    useState('all')
+
   const allCreations = getCreations()
   const allWorlds = getWorlds()
+
+  const worldCategories =
+    getWorldCategories(allWorlds)
 
   const publicCreations =
     allCreations.filter(
@@ -42,12 +56,45 @@ function Explore() {
         creation.visibility === 'public'
     )
 
+  const publicWorlds =
+    allWorlds.filter(
+      (world) =>
+        world.visibility === 'public'
+    )
+
+  const categoryCreations =
+    filterCreationsByCategory(
+      publicCreations,
+      allWorlds,
+      category
+    )
+
+  const categoryWorlds =
+    filterWorldsByCategory(
+      publicWorlds,
+      category
+    )
+
+  const searchedCreations =
+    searchCreations(
+      categoryCreations,
+      searchQuery
+    )
+
+  const searchedWorlds =
+    searchWorlds(
+      categoryWorlds,
+      searchQuery
+    )
+
   const discoveredCreations =
-    discoverCreations(publicCreations)
+    discoverCreations(
+      searchedCreations
+    )
 
   const discoveredWorlds =
     discoverWorlds(
-      allWorlds,
+      searchedWorlds,
       allCreations
     )
 
@@ -55,7 +102,7 @@ function Explore() {
     mode === 'recommended'
       ? discoveredCreations
       : sortCreationsByMode(
-          allCreations,
+          searchedCreations,
           mode
         )
 
@@ -63,7 +110,7 @@ function Explore() {
     mode === 'recommended'
       ? discoveredWorlds
       : sortWorldsByMode(
-          allWorlds,
+          searchedWorlds,
           allCreations,
           mode
         )
@@ -85,23 +132,79 @@ function Explore() {
           by relevance, engagement, and recency.
         </p>
 
+        <div className="explore-search">
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(event) =>
+              setSearchQuery(
+                event.target.value
+              )
+            }
+            placeholder="Search Worlds and Creations..."
+            aria-label="Search Worlds and Creations"
+          />
+        </div>
+
+        <div className="explore-categories">
+          <button
+            type="button"
+            className={
+              category === 'all'
+                ? 'category-control active'
+                : 'category-control'
+            }
+            onClick={() =>
+              setCategory('all')
+            }
+          >
+            All
+          </button>
+
+          {worldCategories.map(
+            (worldCategory) => (
+              <button
+                key={worldCategory}
+                type="button"
+                className={
+                  category ===
+                  worldCategory
+                    ? 'category-control active'
+                    : 'category-control'
+                }
+                onClick={() =>
+                  setCategory(
+                    worldCategory
+                  )
+                }
+              >
+                {worldCategory}
+              </button>
+            )
+          )}
+        </div>
+
         <div className="discovery-controls">
-          {discoveryModes.map((discoveryMode) => (
-            <button
-              key={discoveryMode.id}
-              type="button"
-              className={
-                mode === discoveryMode.id
-                  ? 'discovery-control active'
-                  : 'discovery-control'
-              }
-              onClick={() =>
-                setMode(discoveryMode.id)
-              }
-            >
-              {discoveryMode.label}
-            </button>
-          ))}
+          {discoveryModes.map(
+            (discoveryMode) => (
+              <button
+                key={discoveryMode.id}
+                type="button"
+                className={
+                  mode === discoveryMode.id
+                    ? 'discovery-control active'
+                    : 'discovery-control'
+                }
+                onClick={() =>
+                  setMode(
+                    discoveryMode.id
+                  )
+                }
+              >
+                {discoveryMode.label}
+              </button>
+            )
+          )}
         </div>
       </section>
 
@@ -120,14 +223,24 @@ function Explore() {
           </span>
         </div>
 
-        <div className="worlds-grid">
-          {displayedWorlds.map((world) => (
-            <WorldCard
-              key={world.id}
-              world={world}
-            />
-          ))}
-        </div>
+        {displayedWorlds.length > 0 ? (
+          <div className="worlds-grid">
+            {displayedWorlds.map(
+              (world) => (
+                <WorldCard
+                  key={world.id}
+                  world={world}
+                />
+              )
+            )}
+          </div>
+        ) : (
+          <div className="empty-state">
+            <p>
+              No Worlds match your search.
+            </p>
+          </div>
+        )}
       </section>
 
       <section className="explore-section">
@@ -146,14 +259,24 @@ function Explore() {
           </span>
         </div>
 
-        <div className="creations-grid">
-          {displayedCreations.map((creation) => (
-            <CreationCard
-              key={creation.id}
-              creation={creation}
-            />
-          ))}
-        </div>
+        {displayedCreations.length > 0 ? (
+          <div className="creations-grid">
+            {displayedCreations.map(
+              (creation) => (
+                <CreationCard
+                  key={creation.id}
+                  creation={creation}
+                />
+              )
+            )}
+          </div>
+        ) : (
+          <div className="empty-state">
+            <p>
+              No Creations match your search.
+            </p>
+          </div>
+        )}
       </section>
     </main>
   )

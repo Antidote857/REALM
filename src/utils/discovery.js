@@ -241,3 +241,125 @@ export function sortWorldsByMode(
       )
   }
 }
+
+export function searchWorlds(worlds, query) {
+  const normalizedQuery =
+    query.trim().toLowerCase()
+
+  if (!normalizedQuery) {
+    return worlds
+  }
+
+  return worlds.filter((world) => {
+    const searchableText = [
+      world.name,
+      world.description,
+      world.category,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+
+    return searchableText.includes(
+      normalizedQuery
+    )
+  })
+}
+
+export function searchCreations(
+  creations,
+  query
+) {
+  const normalizedQuery =
+    query.trim().toLowerCase()
+
+  if (!normalizedQuery) {
+    return creations
+  }
+
+  return creations.filter((creation) => {
+    const searchableText = [
+      creation.title,
+      creation.excerpt,
+      creation.content,
+      creation.creator?.name,
+      creation.creator?.username,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+
+    return searchableText.includes(
+      normalizedQuery
+    )
+  })
+}
+
+export function getWorldCategories(worlds) {
+  return [
+    ...new Set(
+      worlds
+        .map((world) => world.category)
+        .filter(Boolean)
+    ),
+  ].sort()
+}
+
+export function filterWorldsByCategory(
+  worlds,
+  category = 'all'
+) {
+  const publicWorlds = worlds.filter(
+    (world) =>
+      world.visibility === 'public'
+  )
+
+  if (
+    !category ||
+    category.toLowerCase() === 'all'
+  ) {
+    return publicWorlds
+  }
+
+  return publicWorlds.filter(
+    (world) =>
+      world.category?.toLowerCase() ===
+      category.toLowerCase()
+  )
+}
+
+export function filterCreationsByCategory(
+  creations,
+  worlds,
+  category = 'all'
+) {
+  const publicCreations =
+    creations.filter(
+      (creation) =>
+        creation.visibility === 'public'
+    )
+
+  if (
+    !category ||
+    category.toLowerCase() === 'all'
+  ) {
+    return publicCreations
+  }
+
+  const matchingWorldSlugs =
+    worlds
+      .filter(
+        (world) =>
+          world.visibility === 'public' &&
+          world.category?.toLowerCase() ===
+            category.toLowerCase()
+      )
+      .map((world) => world.slug)
+
+  return publicCreations.filter(
+    (creation) =>
+      matchingWorldSlugs.includes(
+        creation.worldSlug
+      )
+  )
+}

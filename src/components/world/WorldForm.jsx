@@ -123,14 +123,17 @@ export default function WorldForm({
        * connected later without redesigning the form.
        */
       const resultWorld = {
-        ...(world || {}),
-        name: name.trim(),
-        slug: slug.toLowerCase(),
-        description: description.trim(),
-        visibility,
-        ...(avatar ? { avatar } : {}),
-        ...(banner ? { banner } : {}),
-      }
+  ...(world || {}),
+  name: name.trim(),
+  slug: slug.toLowerCase(),
+  description: description.trim(),
+  visibility,
+  ...(isCreate && !world?.createdAt
+    ? { createdAt: new Date().toISOString() }
+    : {}),
+  ...(avatar ? { avatar } : {}),
+  ...(banner ? { banner } : {}),
+}
 
       // Small delay preserves the Base44 loading interaction visually.
       await new Promise((resolve) => setTimeout(resolve, 350))

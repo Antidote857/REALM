@@ -1,13 +1,20 @@
-import { creations } from '../data/creations'
-import { worlds } from '../data/worlds'
+import { getCreations } from '../data/creationStore'
+import { getWorlds } from '../data/worldStore'
 import { discoverCreations } from '../utils/discovery'
 import CreationCard from '../components/CreationCard'
 import WorldCard from '../components/WorldCard'
 
 function Explore() {
-  const discoveredCreations = discoverCreations(creations)
+  const allCreations = getCreations()
+  const allWorlds = getWorlds()
 
-  const publicWorlds = worlds.filter(
+  const publicCreations = allCreations.filter(
+    (creation) => creation.visibility === 'public'
+  )
+
+  const discoveredCreations = discoverCreations(publicCreations)
+
+  const publicWorlds = allWorlds.filter(
     (world) => world.visibility === 'public'
   )
 
@@ -28,6 +35,7 @@ function Explore() {
         <div className="explore-section-header">
           <div>
             <span className="section-label">WORLDS</span>
+
             <h2>Explore Worlds</h2>
           </div>
 
@@ -50,6 +58,7 @@ function Explore() {
         <div className="explore-section-header">
           <div>
             <span className="section-label">CREATIONS</span>
+
             <h2>Discover Creations</h2>
           </div>
 

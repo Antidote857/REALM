@@ -1,9 +1,17 @@
-import { worlds } from '../data/worlds'
+import { Link } from 'react-router-dom'
+import { getWorlds } from '../data/worldStore'
 import WorldCard from '../components/WorldCard'
 
 function Worlds() {
-  const featuredWorlds = worlds.filter((world) => world.featured)
-  const otherWorlds = worlds.filter((world) => !world.featured)
+  const worlds = getWorlds()
+
+  const featuredWorlds = worlds.filter(
+    (world) => world.featured
+  )
+
+  const otherWorlds = worlds.filter(
+    (world) => !world.featured
+  )
 
   return (
     <section className="worlds-page">
@@ -19,9 +27,12 @@ function Worlds() {
           </p>
         </div>
 
-        <button className="primary-button create-world-button">
+        <Link
+          to="/create-world"
+          className="primary-button create-world-button"
+        >
           Create World
-        </button>
+        </Link>
       </div>
 
       <div className="worlds-group">
@@ -32,7 +43,10 @@ function Worlds() {
 
         <div className="world-grid">
           {featuredWorlds.map((world) => (
-            <WorldCard key={world.id} world={world} />
+            <WorldCard
+              key={world.id}
+              world={world}
+            />
           ))}
         </div>
       </div>
@@ -45,7 +59,10 @@ function Worlds() {
 
         <div className="world-grid">
           {otherWorlds.map((world) => (
-            <WorldCard key={world.id} world={world} />
+            <WorldCard
+              key={world.id}
+              world={world}
+            />
           ))}
         </div>
       </div>

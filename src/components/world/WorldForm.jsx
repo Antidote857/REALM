@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { Check, Globe, Loader2, Lock, Upload, X } from 'lucide-react'
 
+
+import { saveWorld } from '../../data/worldStore'
+
 export default function WorldForm({
   mode = 'create',
   world,
@@ -132,7 +135,16 @@ export default function WorldForm({
       // Small delay preserves the Base44 loading interaction visually.
       await new Promise((resolve) => setTimeout(resolve, 350))
 
-      onSuccess?.(resultWorld)
+const savedWorld = saveWorld({
+  ...resultWorld,
+  id: resultWorld.id || crypto.randomUUID(),
+  category: resultWorld.category || 'Community',
+  members: resultWorld.members || 1,
+  creations: resultWorld.creations || 0,
+  featured: resultWorld.featured || false,
+})
+
+onSuccess?.(savedWorld)
     } catch (err) {
       setError(err.message || 'Something went wrong')
     } finally {

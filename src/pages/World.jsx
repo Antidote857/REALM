@@ -1,12 +1,12 @@
 import { Link, useParams } from 'react-router-dom'
-import { worlds } from '../data/worlds'
+import { getWorldBySlug } from '../data/worldStore'
 import { getCreationsByWorld } from '../data/creationStore'
 import CreationCard from '../components/CreationCard'
 
 function World() {
   const { slug } = useParams()
 
-  const world = worlds.find((item) => item.slug === slug)
+  const world = getWorldBySlug(slug)
 
   const worldCreations = getCreationsByWorld(slug)
 
@@ -22,7 +22,10 @@ function World() {
           available.
         </p>
 
-        <Link to="/worlds" className="primary-button">
+        <Link
+          to="/worlds"
+          className="primary-button"
+        >
           Back to Worlds
         </Link>
       </section>
@@ -33,7 +36,9 @@ function World() {
     <section className="world-page">
       <div className="world-page-header">
         <div>
-          <span className="eyebrow">{world.category}</span>
+          <span className="eyebrow">
+            {world.category || 'COMMUNITY'}
+          </span>
 
           <h1>{world.name}</h1>
 
@@ -47,17 +52,25 @@ function World() {
 
       <div className="world-meta">
         <div>
-          <strong>{world.members.toLocaleString()}</strong>
+          <strong>
+            {(world.members || 0).toLocaleString()}
+          </strong>
           <span>Members</span>
         </div>
 
         <div>
-          <strong>{worldCreations.length.toLocaleString()}</strong>
+          <strong>
+            {worldCreations.length.toLocaleString()}
+          </strong>
           <span>Creations</span>
         </div>
 
         <div>
-          <strong>Public</strong>
+          <strong>
+            {world.visibility === 'private'
+              ? 'Private'
+              : 'Public'}
+          </strong>
           <span>Visibility</span>
         </div>
       </div>
@@ -70,20 +83,29 @@ function World() {
         <a href="#world-ai">World AI</a>
       </nav>
 
-      <div id="overview" className="world-content">
+      <div
+        id="overview"
+        className="world-content"
+      >
         <div>
           <span className="eyebrow">OVERVIEW</span>
 
-          <h2>Welcome to {world.name}.</h2>
+          <h2>
+            Welcome to {world.name}.
+          </h2>
 
           <p>
-            This is the beginning of this World. Members will eventually be
-            able to share Creations, discuss ideas, collaborate on projects,
-            and build the identity of this community together.
+            This is the beginning of this World. Members will
+            eventually be able to share Creations, discuss ideas,
+            collaborate on projects, and build the identity of
+            this community together.
           </p>
         </div>
 
-        <aside id="world-ai" className="world-ai-card">
+        <aside
+          id="world-ai"
+          className="world-ai-card"
+        >
           <span className="eyebrow">WORLD AI</span>
 
           <h3>
@@ -91,8 +113,8 @@ function World() {
           </h3>
 
           <p>
-            REALM AI will eventually understand this World's context,
-            conversations, Creations, and knowledge.
+            REALM AI will eventually understand this World's
+            context, conversations, Creations, and knowledge.
           </p>
 
           <Link
@@ -104,48 +126,71 @@ function World() {
         </aside>
       </div>
 
-      <div id="creations" className="world-creations-section">
-  <div className="world-section-heading">
-    <div>
-      <span className="eyebrow">CREATIONS</span>
-      <h2>What this World is creating.</h2>
-    </div>
+      <div
+        id="creations"
+        className="world-creations-section"
+      >
+        <div className="world-section-heading">
+          <div>
+            <span className="eyebrow">CREATIONS</span>
 
-    <span className="creation-count">
-      {worldCreations.length} Creations
-    </span>
-  </div>
+            <h2>
+              What this World is creating.
+            </h2>
+          </div>
 
-  {worldCreations.length > 0 ? (
-    <div className="creation-grid">
-      {worldCreations.map((creation) => (
-        <CreationCard
-          key={creation.id}
-          creation={creation}
-        />
-      ))}
-    </div>
-  ) : (
-    <div className="empty-state">
-      <p>This World hasn't created anything yet.</p>
-    </div>
-  )}
-</div>
+          <span className="creation-count">
+            {worldCreations.length} Creations
+          </span>
+        </div>
 
-      <div id="members" className="world-placeholder-section">
+        {worldCreations.length > 0 ? (
+          <div className="creation-grid">
+            {worldCreations.map((creation) => (
+              <CreationCard
+                key={creation.id}
+                creation={creation}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state">
+            <p>
+              This World hasn't created anything yet.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div
+        id="members"
+        className="world-placeholder-section"
+      >
         <span className="eyebrow">MEMBERS</span>
-        <h2>The people building this World.</h2>
+
+        <h2>
+          The people building this World.
+        </h2>
+
         <p>
-          World members and community activity will appear here.
+          World members and community activity will appear
+          here.
         </p>
       </div>
 
-      <div id="about" className="world-placeholder-section">
+      <div
+        id="about"
+        className="world-placeholder-section"
+      >
         <span className="eyebrow">ABOUT</span>
-        <h2>About this World.</h2>
+
+        <h2>
+          About this World.
+        </h2>
+
         <p>
-          World rules, purpose, ownership, and other information will live
-          here.
+          World rules, purpose, ownership, and other
+          information will live here.
         </p>
       </div>
     </section>

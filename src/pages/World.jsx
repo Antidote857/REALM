@@ -52,7 +52,7 @@ function World() {
         </div>
 
         <div>
-          <strong>{world.creations.toLocaleString()}</strong>
+          <strong>{worldCreations.length.toLocaleString()}</strong>
           <span>Creations</span>
         </div>
 

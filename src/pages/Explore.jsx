@@ -1,6 +1,6 @@
+import { discoverCreations, discoverWorlds } from '../utils/discovery'
 import { getCreations } from '../data/creationStore'
 import { getWorlds } from '../data/worldStore'
-import { discoverCreations } from '../utils/discovery'
 import CreationCard from '../components/CreationCard'
 import WorldCard from '../components/WorldCard'
 
@@ -12,11 +12,11 @@ function Explore() {
     (creation) => creation.visibility === 'public'
   )
 
-  const discoveredCreations = discoverCreations(publicCreations)
+  const discoveredCreations =
+    discoverCreations(publicCreations)
 
-  const publicWorlds = allWorlds.filter(
-    (world) => world.visibility === 'public'
-  )
+  const discoveredWorlds =
+    discoverWorlds(allWorlds)
 
   return (
     <main className="explore-page">
@@ -40,12 +40,12 @@ function Explore() {
           </div>
 
           <span className="explore-count">
-            {publicWorlds.length} public Worlds
+            {discoveredWorlds.length} public Worlds
           </span>
         </div>
 
         <div className="worlds-grid">
-          {publicWorlds.map((world) => (
+          {discoveredWorlds.map((world) => (
             <WorldCard
               key={world.id}
               world={world}

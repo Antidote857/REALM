@@ -1,9 +1,12 @@
+
 import { useState } from 'react'
 import {
   discoverCreations,
   discoverWorlds,
   filterCreationsByCategory,
+  filterCreationsByTopic,
   filterWorldsByCategory,
+  getCreationTopics,
   getWorldCategories,
   searchCreations,
   searchWorlds,
@@ -44,11 +47,17 @@ function Explore() {
   const [category, setCategory] =
     useState('all')
 
+  const [topic, setTopic] =
+    useState('all')
+
   const allCreations = getCreations()
   const allWorlds = getWorlds()
 
   const worldCategories =
     getWorldCategories(allWorlds)
+
+  const creationTopics =
+    getCreationTopics(allCreations)
 
   const publicCreations =
     allCreations.filter(
@@ -62,6 +71,12 @@ function Explore() {
         world.visibility === 'public'
     )
 
+  const categoryWorlds =
+    filterWorldsByCategory(
+      publicWorlds,
+      category
+    )
+
   const categoryCreations =
     filterCreationsByCategory(
       publicCreations,
@@ -69,21 +84,21 @@ function Explore() {
       category
     )
 
-  const categoryWorlds =
-    filterWorldsByCategory(
-      publicWorlds,
-      category
-    )
-
-  const searchedCreations =
-    searchCreations(
+  const topicCreations =
+    filterCreationsByTopic(
       categoryCreations,
-      searchQuery
+      topic
     )
 
   const searchedWorlds =
     searchWorlds(
       categoryWorlds,
+      searchQuery
+    )
+
+  const searchedCreations =
+    searchCreations(
+      topicCreations,
       searchQuery
     )
 
@@ -154,9 +169,10 @@ function Explore() {
                 ? 'category-control active'
                 : 'category-control'
             }
-            onClick={() =>
+            onClick={() => {
               setCategory('all')
-            }
+              setTopic('all')
+            }}
           >
             All
           </button>
@@ -172,16 +188,61 @@ function Explore() {
                     ? 'category-control active'
                     : 'category-control'
                 }
-                onClick={() =>
+                onClick={() => {
                   setCategory(
                     worldCategory
                   )
-                }
+                  setTopic('all')
+                }}
               >
                 {worldCategory}
               </button>
             )
           )}
+        </div>
+
+        <div className="explore-topics">
+          <span className="explore-topics-label">
+            TOPICS
+          </span>
+
+          <div className="explore-topic-controls">
+            <button
+              type="button"
+              className={
+                topic === 'all'
+                  ? 'topic-control active'
+                  : 'topic-control'
+              }
+              onClick={() =>
+                setTopic('all')
+              }
+            >
+              All
+            </button>
+
+            {creationTopics.map(
+              (creationTopic) => (
+                <button
+                  key={creationTopic}
+                  type="button"
+                  className={
+                    topic ===
+                    creationTopic
+                      ? 'topic-control active'
+                      : 'topic-control'
+                  }
+                  onClick={() =>
+                    setTopic(
+                      creationTopic
+                    )
+                  }
+                >
+                  {creationTopic}
+                </button>
+              )
+            )}
+          </div>
         </div>
 
         <div className="discovery-controls">
@@ -283,3 +344,4 @@ function Explore() {
 }
 
 export default Explore
+

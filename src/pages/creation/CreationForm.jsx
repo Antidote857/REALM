@@ -7,7 +7,7 @@ import {
   Upload,
 } from 'lucide-react'
 
-import { worlds as realmWorlds } from '../../data/worlds'
+import { getWorlds } from '../../data/worldStore'
 import { saveCreation } from '../../data/creationStore'
 
 const CREATION_TYPES = [
@@ -15,6 +15,31 @@ const CREATION_TYPES = [
   { value: 'idea', label: 'Idea' },
   { value: 'resource', label: 'Resource' },
   { value: 'article', label: 'Article' },
+]
+
+const SUGGESTED_TOPICS = [
+  'AI',
+  'Artificial Intelligence',
+  'AI Agents',
+  'React',
+  'JavaScript',
+  'Web Development',
+  'Frontend',
+  'UI Design',
+  'UX Design',
+  'Design Systems',
+  'Game Development',
+  'Game Design',
+  'World Building',
+  'Storytelling',
+  'Building',
+  'Projects',
+  'Entrepreneurship',
+  'Product Development',
+  'Learning',
+  'Education',
+  'Knowledge Sharing',
+  'Collaboration',
 ]
 
 export default function CreationForm({
@@ -26,9 +51,8 @@ export default function CreationForm({
 }) {
   const isCreate = mode === 'create'
 
-  const availableWorlds = Array.isArray(realmWorlds)
-    ? realmWorlds
-    : []
+  const availableWorlds = getWorlds()
+    
 
   const defaultWorldId =
     initialWorldId &&
@@ -64,6 +88,12 @@ export default function CreationForm({
       defaultWorldId
   )
 
+  const [topics, setTopics] = useState(
+    Array.isArray(creation?.topics)
+      ? creation.topics
+      : []
+  )
+
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
@@ -96,6 +126,27 @@ export default function CreationForm({
     }
 
     reader.readAsDataURL(file)
+  }
+
+  const toggleTopic = (topic) => {
+    setTopics((currentTopics) => {
+      const alreadySelected =
+        currentTopics.some(
+          (item) =>
+            item.toLowerCase() ===
+            topic.toLowerCase()
+        )
+
+      if (alreadySelected) {
+        return currentTopics.filter(
+          (item) =>
+            item.toLowerCase() !==
+            topic.toLowerCase()
+        )
+      }
+
+      return [...currentTopics, topic]
+    })
   }
 
   const handleSubmit = async (event) => {
@@ -154,6 +205,8 @@ export default function CreationForm({
         description: trimmedDescription,
 
         content: trimmedDescription,
+
+        topics,
 
         creator:
           creation?.creator || {
@@ -382,6 +435,59 @@ export default function CreationForm({
         <p className="creation-character-count">
           {description.length}/2000
         </p>
+      </div>
+
+      {/* Topics */}
+      <div className="creation-form-field">
+        <span className="creation-form-label">
+          Topics
+        </span>
+
+        <p className="creation-form-help">
+          Add topics that help people discover your
+          Creation.
+        </p>
+
+        <div className="creation-topic-grid">
+          {SUGGESTED_TOPICS.map(
+            (suggestedTopic) => {
+              const selected =
+                topics.some(
+                  (item) =>
+                    item.toLowerCase() ===
+                    suggestedTopic.toLowerCase()
+                )
+
+              return (
+                <button
+                  key={suggestedTopic}
+                  type="button"
+                  className={
+                    selected
+                      ? 'creation-topic-option active'
+                      : 'creation-topic-option'
+                  }
+                  onClick={() =>
+                    toggleTopic(
+                      suggestedTopic
+                    )
+                  }
+                >
+                  {suggestedTopic}
+                </button>
+              )
+            }
+          )}
+        </div>
+
+        {topics.length > 0 && (
+          <p className="creation-form-help">
+            {topics.length} topic
+            {topics.length === 1
+              ? ''
+              : 's'} selected.
+          </p>
+        )}
       </div>
 
       {/* AI assistance */}

@@ -1,3 +1,4 @@
+
 export const creations = [
   {
     id: 'creation-ai-agent',
@@ -8,6 +9,12 @@ export const creations = [
       'I have been experimenting with AI agents and exploring how they can reason about context instead of simply responding to prompts.',
     content:
       'This is a longer-form Creation about experimenting with AI agents, context, and useful workflows.',
+    topics: [
+      'AI',
+      'Artificial Intelligence',
+      'AI Agents',
+      'Context',
+    ],
     creator: {
       name: 'Alex',
       username: 'alex',
@@ -28,6 +35,12 @@ export const creations = [
       'What I learned while building a React application from scratch and turning a simple idea into a working product.',
     content:
       'A detailed Creation documenting the development process, lessons learned, and challenges encountered while building a React application.',
+    topics: [
+      'React',
+      'JavaScript',
+      'Web Development',
+      'Frontend',
+    ],
     creator: {
       name: 'Jordan',
       username: 'jordan',
@@ -48,6 +61,12 @@ export const creations = [
       'Exploring how typography, spacing, hierarchy, and simplicity can make digital products easier to understand.',
     content:
       'A Creation exploring interface design principles and the process of improving a digital product through visual hierarchy.',
+    topics: [
+      'UI Design',
+      'UX Design',
+      'Typography',
+      'Design Systems',
+    ],
     creator: {
       name: 'Maya',
       username: 'maya',
@@ -68,6 +87,12 @@ export const creations = [
       'The journey from having an idea to actually building something people can use.',
     content:
       'A Creation about moving from ideas to execution, learning through experimentation, and building consistently.',
+    topics: [
+      'Building',
+      'Projects',
+      'Entrepreneurship',
+      'Product Development',
+    ],
     creator: {
       name: 'Sam',
       username: 'sam',
@@ -88,6 +113,12 @@ export const creations = [
       'Thinking about how environments, characters, mechanics, and storytelling come together to create immersive worlds.',
     content:
       'A Creation exploring game-world design and the relationship between gameplay, environment, and narrative.',
+    topics: [
+      'Game Development',
+      'Game Design',
+      'World Building',
+      'Storytelling',
+    ],
     creator: {
       name: 'Chris',
       username: 'chris',
@@ -108,6 +139,12 @@ export const creations = [
       'Why sharing what you learn can make the learning process more useful for everyone around you.',
     content:
       'A Creation exploring collaborative learning, knowledge sharing, and the value of learning alongside other people.',
+    topics: [
+      'Learning',
+      'Education',
+      'Knowledge Sharing',
+      'Collaboration',
+    ],
     creator: {
       name: 'Taylor',
       username: 'taylor',
@@ -119,3 +156,4 @@ export const creations = [
     featured: false,
   },
 ]
+

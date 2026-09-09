@@ -363,3 +363,45 @@ export function filterCreationsByCategory(
       )
   )
 }
+
+export function getCreationTopics(creations) {
+  return [
+    ...new Set(
+      creations
+        .flatMap((creation) =>
+          Array.isArray(creation.topics)
+            ? creation.topics
+            : []
+        )
+        .filter(Boolean)
+    ),
+  ].sort()
+}
+
+export function filterCreationsByTopic(
+  creations,
+  topic = 'all'
+) {
+  const publicCreations =
+    creations.filter(
+      (creation) =>
+        creation.visibility === 'public'
+    )
+
+  if (
+    !topic ||
+    topic.toLowerCase() === 'all'
+  ) {
+    return publicCreations
+  }
+
+  return publicCreations.filter(
+    (creation) =>
+      Array.isArray(creation.topics) &&
+      creation.topics.some(
+        (creationTopic) =>
+          creationTopic.toLowerCase() ===
+          topic.toLowerCase()
+      )
+  )
+}

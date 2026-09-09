@@ -1736,7 +1736,7 @@ button {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 35px;
+  margin-top: 18px;
 }
 
 .creation-page-author > div:last-child {
@@ -4519,3 +4519,76 @@ button {
   border-color: hsl(var(--primary) / 0.5);
   background: hsl(var(--primary) / 0.1);
 }
+
+
+/* =========================================================
+   CREATION FORM — TOPICS
+   ========================================================= */
+
+.creation-topic-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.creation-topic-option {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  background: transparent;
+  color: #696d78;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.creation-topic-option:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.025);
+  color: #bfc3cc;
+}
+
+.creation-topic-option.active {
+  border-color: hsl(var(--primary) / 0.4);
+  background: hsl(var(--primary) / 0.08);
+  color: #ffffff;
+}
+
+.creation-topic-option.active:hover {
+  border-color: hsl(var(--primary) / 0.55);
+  background: hsl(var(--primary) / 0.12);
+}
+
+/* =========================================================
+   CREATION PAGE — TOPICS
+   ========================================================= */
+
+.creation-page-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 18px 0 42px;
+}
+.creation-page-topic {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 11px;
+  border: 1px solid hsl(var(--primary) / 0.3);
+  border-radius: 7px;
+  background: hsl(var(--primary) / 0.06);
+  color: #bfc3cc;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+}
+

@@ -1,11 +1,12 @@
+
 import { Link, useParams } from 'react-router-dom'
-import { creations } from '../data/creations'
+import { getCreationBySlug } from '../data/creationStore'
 import { worlds } from '../data/worlds'
 
 function Creation() {
   const { slug } = useParams()
 
-  const creation = creations.find((item) => item.slug === slug)
+  const creation = getCreationBySlug(slug)
 
   if (!creation) {
     return (
@@ -42,12 +43,17 @@ function Creation() {
 
           <div className="creation-page-author">
             <div className="creator-avatar">
-              {creation.creator.name.charAt(0)}
+              {creation.creator?.name?.charAt(0) || 'Y'}
             </div>
 
             <div>
-              <strong>{creation.creator.name}</strong>
-              <span>@{creation.creator.username}</span>
+              <strong>
+                {creation.creator?.name || 'You'}
+              </strong>
+
+              <span>
+                @{creation.creator?.username || 'you'}
+              </span>
             </div>
           </div>
         </div>
@@ -64,8 +70,8 @@ function Creation() {
           </div>
 
           <div className="creation-engagement">
-            <span>{creation.likes} likes</span>
-            <span>{creation.comments} comments</span>
+            <span>{creation.likes || 0} likes</span>
+            <span>{creation.comments || 0} comments</span>
           </div>
         </main>
 
@@ -100,3 +106,4 @@ function Creation() {
 }
 
 export default Creation
+

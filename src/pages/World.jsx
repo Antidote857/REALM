@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { worlds } from '../data/worlds'
-import { creations } from '../data/creations'
+import { getCreationsByWorld } from '../data/creationStore'
 import CreationCard from '../components/CreationCard'
 
 function World() {
@@ -8,9 +8,7 @@ function World() {
 
   const world = worlds.find((item) => item.slug === slug)
 
-  const worldCreations = creations.filter(
-  (creation) => creation.worldSlug === slug
-)
+  const worldCreations = getCreationsByWorld(slug)
 
   if (!world) {
     return (

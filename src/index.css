@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
 * {
   box-sizing: border-box;
 }
@@ -6,22 +8,190 @@ html {
   scroll-behavior: smooth;
 }
 
+:root {
+  /* =========================================
+     REALM DESIGN TOKENS
+     Based on the original Base44 REALM theme
+     ========================================= */
+
+  --background: 230 32% 5%;
+  --foreground: 220 25% 96%;
+
+  --card: 230 30% 7%;
+  --card-foreground: 220 25% 96%;
+
+  --popover: 230 32% 7%;
+  --popover-foreground: 220 25% 96%;
+
+  --primary: 256 90% 72%;
+  --primary-foreground: 230 40% 8%;
+
+  --secondary: 230 28% 12%;
+  --secondary-foreground: 220 25% 96%;
+
+  --muted: 230 28% 10%;
+  --muted-foreground: 225 16% 62%;
+
+  --accent: 230 28% 14%;
+  --accent-foreground: 220 25% 96%;
+
+  --destructive: 0 72% 62%;
+  --destructive-foreground: 220 25% 96%;
+
+  --border: 230 24% 16%;
+  --input: 230 24% 16%;
+  --ring: 256 90% 72%;
+
+  --radius: 0.75rem;
+
+  --font-heading:
+    'Space Grotesk',
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  --font-body:
+    'Inter',
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  --font-display:
+    'Space Grotesk',
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  --font-mono:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace;
+
+  /* Sidebar */
+  --sidebar-background: 230 30% 6%;
+  --sidebar-foreground: 220 25% 96%;
+  --sidebar-primary: 256 90% 72%;
+  --sidebar-primary-foreground: 230 40% 8%;
+  --sidebar-accent: 230 28% 12%;
+  --sidebar-accent-foreground: 220 25% 96%;
+  --sidebar-border: 230 24% 16%;
+  --sidebar-ring: 256 90% 72%;
+}
+
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: #08090d;
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+
+  background:
+    radial-gradient(
+      55% 45% at 50% 0%,
+      hsl(256 90% 72% / 0.08),
+      transparent 70%
+    ),
+    hsl(var(--background));
+
+  color: hsl(var(--foreground));
+
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 button,
-a {
+a,
+input,
+textarea {
   -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-heading);
+}
+
+/* =========================================
+   REALM ATMOSPHERE
+   ========================================= */
+
+.realm-aurora {
+  background-image:
+    radial-gradient(
+      55% 45% at 50% 0%,
+      hsl(256 90% 72% / 0.16),
+      transparent 70%
+    ),
+    radial-gradient(
+      40% 40% at 85% 15%,
+      hsl(190 85% 60% / 0.10),
+      transparent 70%
+    ),
+    radial-gradient(
+      40% 40% at 15% 25%,
+      hsl(280 65% 70% / 0.08),
+      transparent 70%
+    );
+}
+
+.realm-grid {
+  background-image:
+    linear-gradient(
+      hsl(230 24% 16% / 0.45) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      hsl(230 24% 16% / 0.45) 1px,
+      transparent 1px
+    );
+
+  background-size: 48px 48px;
+
+  -webkit-mask-image:
+    radial-gradient(
+      ellipse 75% 55% at 50% 0%,
+      black 35%,
+      transparent 75%
+    );
+
+  mask-image:
+    radial-gradient(
+      ellipse 75% 55% at 50% 0%,
+      black 35%,
+      transparent 75%
+    );
+}
+
+/* =========================================
+   SCROLLBAR
+   ========================================= */
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
 }

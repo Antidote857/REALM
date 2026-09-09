@@ -1,7 +1,10 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Pencil } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
 
-import { getCreationBySlug } from '../../data/creationStore'
+import {
+  deleteCreation,
+  getCreationBySlug,
+} from '../../data/creationStore'
 import CreationForm from './CreationForm'
 
 export default function EditCreation() {
@@ -38,6 +41,20 @@ export default function EditCreation() {
     }
   }
 
+  const handleDelete = () => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${creation.title}"? This action cannot be undone.`
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    deleteCreation(creation.id)
+
+    navigate(`/world/${creation.worldSlug}`)
+  }
+
   return (
     <div className="create-creation-page">
       <header className="create-creation-header">
@@ -60,6 +77,29 @@ export default function EditCreation() {
           onSuccess={handleSuccess}
           submitLabel="Save Changes"
         />
+
+        <div className="creation-delete-section">
+          <div>
+            <span className="creation-delete-label">
+              DANGER ZONE
+            </span>
+
+            <h3>Delete this Creation</h3>
+
+            <p>
+              Permanently remove this Creation from REALM.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="creation-delete-button"
+            onClick={handleDelete}
+          >
+            <Trash2 size={15} strokeWidth={1.8} />
+            <span>Delete Creation</span>
+          </button>
+        </div>
       </div>
     </div>
   )

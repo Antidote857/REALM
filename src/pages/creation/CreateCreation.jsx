@@ -1,7 +1,6 @@
 import React from 'react'
 import { Sparkles } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-
 import CreationForm from './CreationForm'
 
 export default function CreateCreation() {
@@ -11,10 +10,10 @@ export default function CreateCreation() {
   const initialWorldId = searchParams.get('world') || ''
 
   const handleSuccess = (creation) => {
-  if (creation?.slug) {
-    navigate(`/creation/${creation.slug}`)
+    if (creation?.slug) {
+      navigate(`/creation/${creation.slug}`)
+    }
   }
-}
 
   return (
     <div className="create-creation-page">

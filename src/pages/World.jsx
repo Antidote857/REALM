@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
+import { Plus } from 'lucide-react'
 import { getWorldBySlug } from '../data/worldStore'
 import { getCreationsByWorld } from '../data/creationStore'
 import CreationCard from '../components/CreationCard'
@@ -45,10 +46,20 @@ function World() {
           <p>{world.description}</p>
         </div>
 
-        <button className="primary-button">
-          Join World
-        </button>
-      </div>
+        <div className="world-page-actions">
+  <Link
+    to={`/create-creation?world=${world.id}`}
+    className="world-create-button"
+  >
+    <Plus size={15} strokeWidth={1.8} />
+    <span>Create Creation</span>
+  </Link>
+
+  <button className="secondary-button">
+    Join World
+  </button>
+</div>
+</div>
 
       <div className="world-meta">
         <div>

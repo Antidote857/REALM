@@ -1,5 +1,6 @@
 
 import { useState } from 'react'
+import { Sparkles } from 'lucide-react'
 import {
   discoverCreations,
   discoverWorlds,
@@ -267,6 +268,17 @@ function Explore() {
             )
           )}
         </div>
+
+        <a
+          href="/ai?context=discovery"
+          className="discovery-ai-button"
+        >
+          <Sparkles
+            size={16}
+            strokeWidth={1.8}
+          />
+          <span>Ask Discovery AI</span>
+        </a>
       </section>
 
       <section className="explore-section">

@@ -244,5 +244,11 @@ Use the active context and supplied platform information
 when answering questions.
 
 If information is unavailable, say so rather than inventing it.
+
+Use plain text only.
+Do not use Markdown formatting.
+Do not use asterisks (*), underscores (_), hashtags (#), backticks,
+or Markdown bullet syntax.
+Use simple paragraphs and numbered lists when a list is necessary.
 `
 }

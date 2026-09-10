@@ -4,6 +4,7 @@ import {
   Globe,
   Lock,
   Loader2,
+  Sparkles,
   Upload,
 } from 'lucide-react'
 
@@ -52,7 +53,6 @@ export default function CreationForm({
   const isCreate = mode === 'create'
 
   const availableWorlds = getWorlds()
-    
 
   const defaultWorldId =
     initialWorldId &&
@@ -96,6 +96,12 @@ export default function CreationForm({
 
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
+
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState('')
+  const [aiSuggestions, setAiSuggestions] =
+    useState(null)
+
   const [error, setError] = useState('')
 
   const fileInputRef = useRef(null)
@@ -147,6 +153,111 @@ export default function CreationForm({
 
       return [...currentTopics, topic]
     })
+  }
+
+  const handleAIAssist = async () => {
+    setAiError('')
+    setAiSuggestions(null)
+
+    const trimmedTitle = title.trim()
+    const trimmedDescription =
+      description.trim()
+
+    if (
+      !trimmedTitle &&
+      !trimmedDescription
+    ) {
+      setAiError(
+        'Add a title or description before asking AI to assist.'
+      )
+      return
+    }
+
+    const selectedWorld = availableWorlds.find(
+      (world) => world.id === worldId
+    )
+
+    setAiLoading(true)
+
+    try {
+      const response = await fetch(
+        'http://localhost:3001/api/ai/assist-creation',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: trimmedTitle,
+            description: trimmedDescription,
+            world: selectedWorld || null,
+          }),
+        }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+            'REALM AI could not assist with this Creation.'
+        )
+      }
+
+      if (
+        typeof data?.suggestedTitle !==
+          'string' ||
+        typeof data?.suggestedDescription !==
+          'string'
+      ) {
+        throw new Error(
+          'REALM AI returned an invalid assistance response.'
+        )
+      }
+
+      setAiSuggestions({
+        suggestedTitle:
+          data.suggestedTitle.trim(),
+        suggestedDescription:
+          data.suggestedDescription.trim(),
+      })
+    } catch (err) {
+      console.error(
+        'Creation AI Assist error:',
+        err
+      )
+
+      setAiError(
+        err?.message ||
+          'REALM AI could not assist with this Creation. Please try again.'
+      )
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const handleApplyAISuggestions = () => {
+    if (!aiSuggestions) return
+
+    if (aiSuggestions.suggestedTitle) {
+      setTitle(aiSuggestions.suggestedTitle)
+    }
+
+    if (
+      aiSuggestions.suggestedDescription
+    ) {
+      setDescription(
+        aiSuggestions.suggestedDescription
+      )
+    }
+
+    setAiSuggestions(null)
+    setAiError('')
+  }
+
+  const handleKeepMyText = () => {
+    setAiSuggestions(null)
+    setAiError('')
   }
 
   const handleSubmit = async (event) => {
@@ -503,10 +614,90 @@ export default function CreationForm({
           </p>
         </div>
 
-        <span className="creation-ai-status">
-          Coming soon
-        </span>
+        <button
+          type="button"
+          className="creation-ai-button"
+          onClick={handleAIAssist}
+          disabled={aiLoading || loading}
+        >
+          {aiLoading ? (
+            <>
+              <Loader2
+                size={16}
+                className="creation-spin"
+              />
+              Thinking…
+            </>
+          ) : (
+            <>
+              <Sparkles size={16} />
+              Assist with AI
+            </>
+          )}
+        </button>
       </div>
+
+      {aiError && (
+        <div className="creation-form-error">
+          {aiError}
+        </div>
+      )}
+
+      {aiSuggestions && (
+        <div className="creation-ai-suggestions">
+          <div className="creation-ai-suggestions-header">
+            <div>
+              <span className="creation-ai-label">
+                AI SUGGESTION
+              </span>
+
+              <h3>
+                Review the suggested changes
+              </h3>
+            </div>
+          </div>
+
+          <div className="creation-ai-suggestion-field">
+            <span>Suggested title</span>
+
+            <p>
+              {aiSuggestions.suggestedTitle ||
+                'No title suggestion provided.'}
+            </p>
+          </div>
+
+          <div className="creation-ai-suggestion-field">
+            <span>
+              Suggested description
+            </span>
+
+            <p>
+              {aiSuggestions.suggestedDescription ||
+                'No description suggestion provided.'}
+            </p>
+          </div>
+
+          <div className="creation-ai-suggestion-actions">
+            <button
+              type="button"
+              className="creation-ai-apply-button"
+              onClick={
+                handleApplyAISuggestions
+              }
+            >
+              Apply suggestions
+            </button>
+
+            <button
+              type="button"
+              className="creation-ai-keep-button"
+              onClick={handleKeepMyText}
+            >
+              Keep my text
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Type */}
       <div className="creation-form-field">

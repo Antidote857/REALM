@@ -196,6 +196,185 @@ ${message}`
   throw lastError
 }
 
+// Creation AI Assist endpoint
+app.post('/api/ai/assist-creation', async (req, res) => {
+  try {
+    const {
+      title = '',
+      description = '',
+      world = null,
+    } = req.body
+
+    const trimmedTitle = title.trim()
+    const trimmedDescription =
+      description.trim()
+
+    if (
+      !trimmedTitle &&
+      !trimmedDescription
+    ) {
+      return res.status(400).json({
+        error:
+          'A title or description is required for AI assistance.',
+      })
+    }
+
+    const worldContext = world
+      ? `
+WORLD CONTEXT:
+Name: ${world.name || 'Unknown'}
+Category: ${world.category || 'Unknown'}
+Description: ${world.description || 'Not available'}
+`
+      : `
+WORLD CONTEXT:
+No World information is available.
+`
+
+    const assistPrompt = `
+You are REALM AI assisting a user who is creating
+or editing a Creation on the REALM community platform.
+
+Your task is to help refine the user's existing
+Creation title and description.
+
+${worldContext}
+
+CURRENT CREATION:
+Title: ${trimmedTitle || 'Not provided'}
+
+Description:
+${trimmedDescription || 'Not provided'}
+
+RULES:
+1. Preserve the user's original idea and meaning.
+2. Do not invent facts, achievements, statistics,
+   experiences, features, or claims.
+3. Do not introduce information that is not present
+   in the user's Creation or the supplied World context.
+4. Make the title clearer and more engaging without
+   changing what the Creation is about.
+5. Make the description clearer, more useful, and
+   easier to understand.
+6. Keep the suggested description concise.
+7. Return ONLY valid JSON.
+8. Do not use Markdown.
+9. Do not use asterisks, backticks, or commentary
+   outside the JSON.
+
+Return exactly this structure:
+{
+  "suggestedTitle": "string",
+  "suggestedDescription": "string"
+}
+`
+
+    let lastError = null
+
+    for (const model of MODELS) {
+      try {
+        console.log(
+          `Trying Gemini model for Creation AI Assist: ${model}`
+        )
+
+        const response =
+          await ai.models.generateContent({
+            model,
+            contents:
+              'Generate the Creation refinement suggestions now.',
+            config: {
+              systemInstruction:
+                assistPrompt,
+              responseMimeType:
+                'application/json',
+            },
+          })
+
+        console.log(
+          `Creation AI Assist response received from: ${model}`
+        )
+
+        let suggestions
+
+        try {
+          suggestions = JSON.parse(
+            response.text
+          )
+        } catch (parseError) {
+          console.error(
+            'Failed to parse Creation AI Assist JSON:',
+            parseError
+          )
+
+          return res.status(502).json({
+            error:
+              'REALM AI returned an invalid assistance response.',
+          })
+        }
+
+        if (
+          typeof suggestions.suggestedTitle !==
+            'string' ||
+          typeof suggestions.suggestedDescription !==
+            'string'
+        ) {
+          return res.status(502).json({
+            error:
+              'REALM AI returned an incomplete assistance response.',
+          })
+        }
+
+        return res.json({
+          suggestedTitle:
+            suggestions.suggestedTitle.trim(),
+          suggestedDescription:
+            suggestions.suggestedDescription.trim(),
+        })
+      } catch (error) {
+        lastError = error
+
+        console.error(
+          `Gemini model ${model} failed for Creation AI Assist:`,
+          error.status || error.message
+        )
+
+        if (
+          error.status !== 503 &&
+          error.status !== 429
+        ) {
+          throw error
+        }
+      }
+    }
+
+    throw lastError
+  } catch (error) {
+    console.error(
+      'Creation AI Assist error:',
+      error
+    )
+
+    if (error.status === 429) {
+      return res.status(429).json({
+        error:
+          'REALM AI is temporarily busy due to API usage limits. Please try again shortly.',
+      })
+    }
+
+    if (error.status === 503) {
+      return res.status(503).json({
+        error:
+          'REALM AI is temporarily unavailable. Please try again shortly.',
+      })
+    }
+
+    res.status(500).json({
+      error:
+        'REALM AI could not assist with this Creation. Please try again.',
+    })
+  }
+})
+
 // REALM AI endpoint
 app.post('/api/ai', async (req, res) => {
   try {

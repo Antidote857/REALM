@@ -4788,3 +4788,154 @@ button {
   color: #c98686;
 }
 
+.discovery-ai-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+
+/* =========================================================
+   CREATION AI ASSIST
+   ========================================================= */
+
+.creation-ai-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  border-radius: 10px;
+  background: rgba(168, 85, 247, 0.08);
+  color: #c084fc;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.creation-ai-button:hover:not(:disabled) {
+  background: rgba(168, 85, 247, 0.14);
+  border-color: rgba(168, 85, 247, 0.55);
+  color: #d8b4fe;
+  transform: translateY(-1px);
+}
+
+.creation-ai-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.creation-ai-suggestions {
+  margin-top: 24px;
+  padding: 22px;
+  border: 1px solid rgba(168, 85, 247, 0.28);
+  border-radius: 14px;
+  background: rgba(168, 85, 247, 0.045);
+}
+
+.creation-ai-suggestions-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.creation-ai-suggestions-header h3 {
+  margin: 6px 0 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.creation-ai-suggestion-field {
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.creation-ai-suggestion-field + .creation-ai-suggestion-field {
+  margin-top: 12px;
+}
+
+.creation-ai-suggestion-field > span {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a1a1aa;
+}
+
+.creation-ai-suggestion-field p {
+  margin: 0;
+  color: #e4e4e7;
+  line-height: 1.6;
+}
+
+.creation-ai-suggestion-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+
+.creation-ai-apply-button,
+.creation-ai-keep-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border: 1px solid rgba(168, 85, 247, 0.45);
+  border-radius: 9px;
+  background: rgba(168, 85, 247, 0.08);
+  color: #c084fc;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.creation-ai-apply-button:hover,
+.creation-ai-keep-button:hover {
+  background: rgba(168, 85, 247, 0.16);
+  border-color: rgba(168, 85, 247, 0.65);
+  color: #d8b4fe;
+}
+
+
+
+@media (max-width: 640px) {
+  .creation-ai-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .creation-ai-button {
+    width: 100%;
+  }
+
+  .creation-ai-suggestion-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .creation-ai-apply-button,
+  .creation-ai-keep-button {
+    width: 100%;
+  }
+}
+
+

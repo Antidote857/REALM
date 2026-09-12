@@ -1,14 +1,18 @@
-
 import { Link } from 'react-router-dom'
 import { ArrowRight, Compass, Globe, Sparkles } from 'lucide-react'
 import { getWorlds } from '../data/worldStore'
 import { getCreations } from '../data/creationStore'
+import { getProfile } from '../data/profileStore'
 
 function Profile() {
   const worlds = getWorlds()
   const creations = getCreations()
+  const profile = getProfile()
 
-  const name = 'Antidote857'
+  const name =
+    profile.displayName ||
+    profile.username ||
+    'Unnamed'
 
   return (
     <section className="profile-page">
@@ -17,16 +21,16 @@ function Profile() {
 
         <div className="profile-identity">
           <div className="profile-avatar">
-            {name.charAt(0)}
+            {name.charAt(0).toUpperCase()}
           </div>
 
           <div>
-            <h1>{name}</h1>
+  <h1>{name}</h1>
 
-            <p>
-              Your REALM identity.
-            </p>
-          </div>
+  <p>
+    {profile.bio || 'Your REALM identity.'}
+  </p>
+</div>
         </div>
 
         <p className="profile-intro">
@@ -60,54 +64,80 @@ function Profile() {
         </div>
 
         <div className="profile-action-grid">
-          <Link to="/my-worlds" className="profile-action-card">
+          <Link
+            to="/my-worlds"
+            className="profile-action-card"
+          >
             <div className="profile-action-icon">
               <Globe size={20} />
             </div>
 
             <div>
               <h3>Worlds</h3>
-              <p>Explore the Worlds currently available in REALM.</p>
+              <p>
+                Explore the Worlds currently available in REALM.
+              </p>
             </div>
 
-            <ArrowRight className="profile-action-arrow" size={17} />
+            <ArrowRight
+              className="profile-action-arrow"
+              size={17}
+            />
           </Link>
 
-          <Link to="/explore" className="profile-action-card">
+          <Link
+            to="/explore"
+            className="profile-action-card"
+          >
             <div className="profile-action-icon">
               <Compass size={20} />
             </div>
 
             <div>
               <h3>Explore</h3>
-              <p>Discover public Worlds and Creations across REALM.</p>
+              <p>
+                Discover public Worlds and Creations across REALM.
+              </p>
             </div>
 
-            <ArrowRight className="profile-action-arrow" size={17} />
+            <ArrowRight
+              className="profile-action-arrow"
+              size={17}
+            />
           </Link>
 
-          <Link to="/ai" className="profile-action-card">
+          <Link
+            to="/ai"
+            className="profile-action-card"
+          >
             <div className="profile-action-icon">
               <Sparkles size={20} />
             </div>
 
             <div>
               <h3>REALM AI</h3>
-              <p>Explore REALM using your authorized AI context.</p>
+              <p>
+                Explore REALM using your authorized AI context.
+              </p>
             </div>
 
-            <ArrowRight className="profile-action-arrow" size={17} />
+            <ArrowRight
+              className="profile-action-arrow"
+              size={17}
+            />
           </Link>
         </div>
       </section>
 
       <section className="profile-placeholder">
         <span>PROFILE SYSTEM</span>
-        <strong>Authentication, ownership, and community activity are coming in a later release.</strong>
+
+        <strong>
+          Authentication, ownership, and community activity are coming in a later release.
+        </strong>
       </section>
     </section>
   )
 }
 
 export default Profile
-

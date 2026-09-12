@@ -54,13 +54,17 @@ export default function CreationForm({
 
   const availableWorlds = getWorlds()
 
+  const publicWorlds = availableWorlds.filter(
+    (world) => world.visibility === 'public'
+  )
+
   const defaultWorldId =
     initialWorldId &&
-    availableWorlds.some(
+    publicWorlds.some(
       (world) => world.id === initialWorldId
     )
       ? initialWorldId
-      : availableWorlds[0]?.id || ''
+      : publicWorlds[0]?.id || ''
 
   const [title, setTitle] = useState(
     creation?.title || ''
@@ -83,9 +87,12 @@ export default function CreationForm({
   )
 
   const [worldId, setWorldId] = useState(
-    creation?.world_id ||
-      initialWorldId ||
-      defaultWorldId
+    creation?.world_id &&
+      publicWorlds.some(
+        (world) => world.id === creation.world_id
+      )
+      ? creation.world_id
+      : defaultWorldId
   )
 
   const [topics, setTopics] = useState(
@@ -173,7 +180,7 @@ export default function CreationForm({
       return
     }
 
-    const selectedWorld = availableWorlds.find(
+    const selectedWorld = publicWorlds.find(
       (world) => world.id === worldId
     )
 
@@ -266,7 +273,8 @@ export default function CreationForm({
     setError('')
 
     const trimmedTitle = title.trim()
-    const trimmedDescription = description.trim()
+    const trimmedDescription =
+      description.trim()
 
     if (
       trimmedTitle.length < 1 ||
@@ -285,7 +293,7 @@ export default function CreationForm({
       return
     }
 
-    const selectedWorld = availableWorlds.find(
+    const selectedWorld = publicWorlds.find(
       (world) => world.id === worldId
     )
 
@@ -367,7 +375,7 @@ export default function CreationForm({
   }
 
   const noWorlds =
-    isCreate && availableWorlds.length === 0
+    isCreate && publicWorlds.length === 0
 
   return (
     <form
@@ -385,9 +393,9 @@ export default function CreationForm({
           <strong>No Worlds available</strong>
 
           <p>
-            You aren't an active member of any World yet.
-            Join or create a World before publishing a
-            Creation.
+            No public Worlds are available yet.
+            Create a World first, then publish a
+            Creation inside it.
           </p>
         </div>
       )}
@@ -501,23 +509,22 @@ export default function CreationForm({
                 No Worlds available
               </option>
             ) : (
-              availableWorlds.map((world) => (
+              publicWorlds.map((world) => (
                 <option
                   key={world.id}
                   value={world.id}
                 >
                   {world.name}
-                  {world.visibility === 'private'
-                    ? ' (Private)'
-                    : ''}
                 </option>
               ))
             )}
           </select>
 
           <p className="creation-form-help">
-            You can only publish inside Worlds where
-            you're an active member.
+            Choose the public World where this
+            Creation will live. Private World access
+            will be enforced when REALM accounts and
+            membership are introduced.
           </p>
         </div>
       )}

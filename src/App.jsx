@@ -121,7 +121,7 @@ function Sidebar() {
 
           <div className="realm-user-info">
             <strong>Antidote857</strong>
-            <span>REALM Creator</span>
+            <span>antidote720@gmail.com</span>
           </div>
         </Link>
       </div>

@@ -124,9 +124,9 @@ function World() {
           </h3>
 
           <p>
-            REALM AI will eventually understand this World's
-            context, conversations, Creations, and knowledge.
-          </p>
+  REALM AI understands this World's context and can
+  help you explore its public Creations and knowledge.
+</p>
 
           <Link
             to={`/ai?context=world&slug=${world.slug}`}

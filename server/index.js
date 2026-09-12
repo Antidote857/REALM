@@ -115,6 +115,37 @@ app.get('/api/auth/me', (req, res) => {
   }
 })
 
+app.post('/api/auth/logout', (req, res) => {
+  try {
+    const sessionId = getSessionIdFromRequest(req)
+
+    if (sessionId) {
+      db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId)
+    }
+
+    res.setHeader(
+      'Set-Cookie',
+      [
+        'realm_session=',
+        'HttpOnly',
+        'Path=/',
+        'SameSite=Lax',
+        'Max-Age=0',
+      ].join('; ')
+    )
+
+    return res.json({
+      success: true,
+    })
+  } catch (error) {
+    console.error('Failed to log out:', error)
+
+    return res.status(500).json({
+      error: 'Failed to log out',
+    })
+  }
+})
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({

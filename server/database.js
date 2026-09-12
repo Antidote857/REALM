@@ -34,6 +34,18 @@ db.exec(`
     avatar TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL
   );
+
+    CREATE TABLE IF NOT EXISTS sessions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+
+    FOREIGN KEY (user_id)
+      REFERENCES users(id)
+      ON DELETE CASCADE
+  );
+
 `)
 
 const conversationColumns = db

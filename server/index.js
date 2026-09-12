@@ -1,8 +1,8 @@
-
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import crypto from 'crypto'
+import { promisify } from 'util'
 import { GoogleGenAI } from '@google/genai'
 import db from './database.js'
 
@@ -10,6 +10,8 @@ dotenv.config()
 
 const app = express()
 const PORT = 3001
+
+const scrypt = promisify(crypto.scrypt)
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -24,6 +26,195 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     service: 'REALM AI backend',
   })
+})
+
+// Hash a password securely using scrypt
+async function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex')
+
+  const derivedKey = await scrypt(
+    password,
+    salt,
+    64
+  )
+
+  return {
+    passwordHash: derivedKey.toString('hex'),
+    salt,
+  }
+}
+
+// Create a new REALM account
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const {
+      username = '',
+      displayName = '',
+      email = '',
+      password = '',
+    } = req.body
+
+    const normalizedUsername =
+      username.trim().toLowerCase()
+
+    const normalizedDisplayName =
+      displayName.trim()
+
+    const normalizedEmail =
+      email.trim().toLowerCase()
+
+    // Validate required fields
+    if (
+      !normalizedUsername ||
+      !normalizedDisplayName ||
+      !normalizedEmail ||
+      !password
+    ) {
+      return res.status(400).json({
+        error:
+          'Username, display name, email, and password are required.',
+      })
+    }
+
+    // Validate username
+    if (
+      !/^[a-z0-9_]{3,20}$/.test(
+        normalizedUsername
+      )
+    ) {
+      return res.status(400).json({
+        error:
+          'Username must be 3–20 characters and contain only lowercase letters, numbers, and underscores.',
+      })
+    }
+
+    // Validate display name
+    if (normalizedDisplayName.length > 50) {
+      return res.status(400).json({
+        error:
+          'Display name must be 50 characters or fewer.',
+      })
+    }
+
+    // Validate email
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        normalizedEmail
+      )
+    ) {
+      return res.status(400).json({
+        error: 'Please provide a valid email address.',
+      })
+    }
+
+    // Validate password
+    if (password.length < 8) {
+      return res.status(400).json({
+        error:
+          'Password must be at least 8 characters long.',
+      })
+    }
+
+    // Check for existing username or email
+    const existingUser = db.prepare(`
+      SELECT
+        id,
+        username,
+        email
+      FROM users
+      WHERE username = ?
+         OR email = ?
+      LIMIT 1
+    `).get(
+      normalizedUsername,
+      normalizedEmail
+    )
+
+    if (existingUser) {
+      if (
+        existingUser.username ===
+        normalizedUsername
+      ) {
+        return res.status(409).json({
+          error: 'Username is already taken.',
+        })
+      }
+
+      if (
+        existingUser.email ===
+        normalizedEmail
+      ) {
+        return res.status(409).json({
+          error:
+            'An account with this email already exists.',
+        })
+      }
+    }
+
+    // Hash password
+    const {
+      passwordHash,
+      salt,
+    } = await hashPassword(password)
+
+    // Store salt together with the hash.
+    // The password itself is never stored.
+    const storedPasswordHash =
+      `${salt}:${passwordHash}`
+
+    const userId = crypto.randomUUID()
+    const now = new Date().toISOString()
+
+    db.prepare(`
+      INSERT INTO users (
+        id,
+        username,
+        display_name,
+        email,
+        password_hash,
+        bio,
+        avatar,
+        created_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      userId,
+      normalizedUsername,
+      normalizedDisplayName,
+      normalizedEmail,
+      storedPasswordHash,
+      '',
+      '',
+      now
+    )
+
+    console.log(
+      `REALM account created: ${normalizedUsername}`
+    )
+
+    // Never return the password or password hash.
+    res.status(201).json({
+      user: {
+        id: userId,
+        username: normalizedUsername,
+        displayName: normalizedDisplayName,
+        email: normalizedEmail,
+        bio: '',
+        avatar: '',
+        createdAt: now,
+      },
+    })
+  } catch (error) {
+    console.error(
+      'Registration error:',
+      error
+    )
+
+    res.status(500).json({
+      error:
+        'Could not create the REALM account.',
+    })
+  }
 })
 
 // Create a new conversation
@@ -184,7 +375,6 @@ ${message}`
         error.status || error.message
       )
 
-      // Fall back when Gemini is temporarily overloaded or rate-limited
       if (
         error.status !== 503 &&
         error.status !== 429
@@ -433,21 +623,18 @@ app.post('/api/ai', async (req, res) => {
       contextKey = 'global',
     } = req.body
 
-    // Validate required fields
     if (!prompt || !message) {
       return res.status(400).json({
         error: 'Prompt and message are required.',
       })
     }
 
-    // Conversation ID is required
     if (!conversationId) {
       return res.status(400).json({
         error: 'Conversation ID is required.',
       })
     }
 
-    // Retrieve conversation from SQLite
     const conversation = db.prepare(`
       SELECT
         id,
@@ -464,7 +651,6 @@ app.post('/api/ai', async (req, res) => {
       })
     }
 
-    // Prevent a conversation from being used in a different AI context
     if (conversation.context_key !== contextKey) {
       return res.status(409).json({
         error:
@@ -472,7 +658,6 @@ app.post('/api/ai', async (req, res) => {
       })
     }
 
-    // Retrieve conversation history from SQLite
     const history = db.prepare(`
       SELECT
         role,
@@ -483,7 +668,6 @@ app.post('/api/ai', async (req, res) => {
       ORDER BY id ASC
     `).all(conversationId)
 
-    // Generate REALM AI response using stored history
     const response = await generateWithFallback(
       prompt,
       message,
@@ -492,7 +676,6 @@ app.post('/api/ai', async (req, res) => {
 
     const now = new Date().toISOString()
 
-    // Save user message
     db.prepare(`
       INSERT INTO messages (
         conversation_id,
@@ -508,7 +691,6 @@ app.post('/api/ai', async (req, res) => {
       now
     )
 
-    // Save REALM AI response
     db.prepare(`
       INSERT INTO messages (
         conversation_id,
@@ -524,7 +706,6 @@ app.post('/api/ai', async (req, res) => {
       now
     )
 
-    // Update conversation timestamp
     db.prepare(`
       UPDATE conversations
       SET updated_at = ?
@@ -567,4 +748,3 @@ app.listen(PORT, () => {
     `REALM AI backend running on http://localhost:3001`
   )
 })
-

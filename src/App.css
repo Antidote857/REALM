@@ -1230,9 +1230,10 @@ button {
 }
 
 .worlds-page {
-  max-width: 1250px;
+  width: auto;
+  max-width: none;
   min-height: calc(100vh - 150px);
-  margin: 0 auto;
+  margin: 0;
   padding: 80px 7vw 120px;
 }
 

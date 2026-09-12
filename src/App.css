@@ -257,9 +257,9 @@
 .realm-main {
   min-width: 0;
   min-height: 100vh;
-
-  margin-left: 256px;
-
+  margin-left: 250px;
+  padding-left: 40px;
+  padding-right: 40px;
   background:
     radial-gradient(
       65% 35% at 50% 0%,
@@ -272,11 +272,8 @@
 .realm-content {
   width: 100%;
   max-width: 1024px;
-
   min-height: calc(100vh - 120px);
-
   margin: 0 auto;
-
   padding: 48px 32px 72px;
 }
 
@@ -365,8 +362,10 @@
   }
 
   .realm-main {
-    margin-left: 76px;
-  }
+  margin-left: 78px;
+  padding-left: 0;
+  padding-right: 0;
+}
 
   .realm-content {
     padding: 40px 24px 60px;
@@ -396,9 +395,11 @@
   }
 
   .realm-main {
-    margin-left: 0;
-    padding-bottom: 68px;
-  }
+  margin-left: 0;
+  padding-bottom: 68px;
+  padding-left: 0;
+  padding-right: 0;
+}
 
   .realm-content {
     padding: 32px 18px 48px;
@@ -643,6 +644,11 @@
   .realm-main {
     margin-left: 78px;
   }
+
+  .realm-content {
+  margin-left: 0;
+  margin-right: 0;
+}
 }
 
 @media (max-width: 500px) {
@@ -681,6 +687,11 @@
     margin-left: 0;
     padding-bottom: 68px;
   }
+
+  .realm-content {
+  margin-left: 0;
+  margin-right: 0;
+}
 }
 
 .realm-app {
@@ -3327,11 +3338,30 @@ button {
    md:pl-64
    --------------------------------------------------------- */
 
+/* =========================================
+   MAIN CONTENT
+   ========================================= */
+
 .realm-main {
   min-width: 0;
   min-height: 100vh;
+  margin-left: 250px;
+  background:
+    radial-gradient(
+      65% 35% at 50% 0%,
+      hsl(var(--primary) / 0.035),
+      transparent 70%
+    ),
+    hsl(var(--background));
+}
 
-  margin-left: 256px;
+.realm-content {
+  width: auto;
+  max-width: none;
+  min-height: calc(100vh - 120px);
+  margin-left: 100px;
+  margin-right: 100px;
+  padding: 48px 32px 72px;
 }
 
 /* ---------------------------------------------------------

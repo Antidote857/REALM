@@ -31,6 +31,90 @@ function setSessionCookie(res, sessionId, maxAge) {
   res.setHeader('Set-Cookie', cookie)
 }
 
+function getSessionIdFromRequest(req) {
+  const cookieHeader = req.headers.cookie
+
+  if (!cookieHeader) {
+    return null
+  }
+
+  const cookies = cookieHeader.split(';').map((cookie) => cookie.trim())
+
+  const sessionCookie = cookies.find((cookie) =>
+    cookie.startsWith('realm_session=')
+  )
+
+  if (!sessionCookie) {
+    return null
+  }
+
+  return decodeURIComponent(sessionCookie.split('=').slice(1).join('='))
+}
+
+app.get('/api/auth/me', (req, res) => {
+  try {
+    const sessionId = getSessionIdFromRequest(req)
+
+    if (!sessionId) {
+      return res.status(401).json({
+        error: 'Not authenticated',
+      })
+    }
+
+    const session = db
+      .prepare(`
+        SELECT
+          sessions.id,
+          sessions.user_id,
+          sessions.expires_at,
+          users.username,
+          users.display_name,
+          users.email,
+          users.bio,
+          users.avatar,
+          users.created_at
+        FROM sessions
+        JOIN users ON users.id = sessions.user_id
+        WHERE sessions.id = ?
+      `)
+      .get(sessionId)
+
+    if (!session) {
+      return res.status(401).json({
+        error: 'Not authenticated',
+      })
+    }
+
+    const expiresAt = new Date(session.expires_at)
+
+    if (expiresAt <= new Date()) {
+      db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId)
+
+      return res.status(401).json({
+        error: 'Session expired',
+      })
+    }
+
+    return res.json({
+      user: {
+        id: session.user_id,
+        username: session.username,
+        displayName: session.display_name,
+        email: session.email,
+        bio: session.bio,
+        avatar: session.avatar,
+        createdAt: session.created_at,
+      },
+    })
+  } catch (error) {
+    console.error('Failed to retrieve authenticated user:', error)
+
+    return res.status(500).json({
+      error: 'Failed to retrieve authenticated user',
+    })
+  }
+})
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({

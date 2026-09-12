@@ -1,3 +1,4 @@
+
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
@@ -196,6 +197,64 @@ ${message}`
   throw lastError
 }
 
+// Safely parse and validate Creation AI Assist responses
+function parseCreationAIResponse(text) {
+  if (typeof text !== 'string' || !text.trim()) {
+    throw new Error(
+      'REALM AI returned an empty response.'
+    )
+  }
+
+  const cleanedText = text
+    .trim()
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim()
+
+  let parsed
+
+  try {
+    parsed = JSON.parse(cleanedText)
+  } catch (error) {
+    console.error(
+      'Failed to parse Creation AI JSON:',
+      error
+    )
+
+    throw new Error(
+      'REALM AI returned an invalid JSON response.'
+    )
+  }
+
+  if (
+    !parsed ||
+    typeof parsed !== 'object' ||
+    Array.isArray(parsed)
+  ) {
+    throw new Error(
+      'REALM AI returned an invalid response structure.'
+    )
+  }
+
+  if (
+    typeof parsed.suggestedTitle !== 'string' ||
+    typeof parsed.suggestedDescription !== 'string'
+  ) {
+    throw new Error(
+      'REALM AI response is missing required fields.'
+    )
+  }
+
+  return {
+    suggestedTitle:
+      parsed.suggestedTitle.trim(),
+
+    suggestedDescription:
+      parsed.suggestedDescription.trim(),
+  }
+}
+
 // Creation AI Assist endpoint
 app.post('/api/ai/assist-creation', async (req, res) => {
   try {
@@ -297,38 +356,27 @@ Return exactly this structure:
         let suggestions
 
         try {
-          suggestions = JSON.parse(
+          suggestions = parseCreationAIResponse(
             response.text
           )
         } catch (parseError) {
           console.error(
-            'Failed to parse Creation AI Assist JSON:',
+            'Creation AI Assist response validation failed:',
             parseError
           )
 
           return res.status(502).json({
             error:
-              'REALM AI returned an invalid assistance response.',
-          })
-        }
-
-        if (
-          typeof suggestions.suggestedTitle !==
-            'string' ||
-          typeof suggestions.suggestedDescription !==
-            'string'
-        ) {
-          return res.status(502).json({
-            error:
-              'REALM AI returned an incomplete assistance response.',
+              'REALM AI returned an invalid assistance response. Please try again.',
           })
         }
 
         return res.json({
           suggestedTitle:
-            suggestions.suggestedTitle.trim(),
+            suggestions.suggestedTitle,
+
           suggestedDescription:
-            suggestions.suggestedDescription.trim(),
+            suggestions.suggestedDescription,
         })
       } catch (error) {
         lastError = error
@@ -519,3 +567,4 @@ app.listen(PORT, () => {
     `REALM AI backend running on http://localhost:3001`
   )
 })
+

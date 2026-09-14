@@ -1,5 +1,15 @@
 
-import { BrowserRouter, Link, NavLink, Route, Routes } from 'react-router-dom'
+import {
+  BrowserRouter,
+  Link,
+  NavLink,
+  Navigate,
+  Route,
+  Routes,
+  useNavigate,
+} from 'react-router-dom'
+
+
 import {
   Home as HomeIcon,
   Compass,
@@ -24,6 +34,9 @@ import CreateHub from './pages/CreateHub'
 import CreateWorld from './pages/CreateWorld'
 import CreateCreation from './pages/creation/CreateCreation'
 import EditCreation from './pages/creation/EditCreation'
+import { AuthProvider, useAuth } from './context/AuthContext'
+import Login from './pages/Login'
+import Register from './pages/Register'
 
 function RealmLogo() {
   return (
@@ -70,7 +83,36 @@ const navigation = [
   { label: 'Settings', path: '/settings', icon: SettingsIcon },
 ]
 
+
+
 function Sidebar() {
+  const { user, loading, logout } = useAuth()
+  const navigate = useNavigate()
+
+  const displayName =
+    user?.displayName ||
+    user?.username ||
+    'Guest'
+
+  const username =
+    user?.username ||
+    'guest'
+
+  const avatarLetter =
+    displayName.charAt(0).toUpperCase()
+
+  async function handleLogout() {
+    try {
+      await logout()
+      navigate('/login', { replace: true })
+    } catch (error) {
+      console.error(
+        'Failed to log out:',
+        error
+      )
+    }
+  }
+
   return (
     <aside className="realm-sidebar">
       <Link
@@ -89,7 +131,7 @@ function Sidebar() {
           {navigation.map(
             ({ label, path, icon: Icon }) => (
               <NavLink
-                key={`${label}-${path}`}
+                key={label + path}
                 to={path}
                 end={path === '/home'}
                 className={({ isActive }) =>
@@ -97,10 +139,7 @@ function Sidebar() {
                 }
               >
                 <span className="sidebar-nav-icon">
-                  <Icon
-                    size={18}
-                    strokeWidth={1.8}
-                  />
+                  <Icon size={18} />
                 </span>
 
                 <span>{label}</span>
@@ -116,125 +155,250 @@ function Sidebar() {
           className="realm-user"
         >
           <div className="realm-user-avatar">
-            A
+            {loading ? '…' : avatarLetter}
           </div>
 
           <div className="realm-user-info">
-            <strong>Antidote857</strong>
-            <span>antidote720@gmail.com</span>
+            <strong>
+              {loading
+                ? 'Loading...'
+                : displayName}
+            </strong>
+
+            <span>
+              {loading
+                ? 'Checking session...'
+                : '@' + username}
+            </span>
           </div>
         </Link>
+
+        <button
+          type="button"
+          className="realm-logout-button"
+          onClick={handleLogout}
+          disabled={loading}
+        >
+          Log out
+        </button>
       </div>
     </aside>
   )
 }
 
+
+
+function RootRoute() {
+  const { loading, isAuthenticated } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="auth-page">
+        <div className="auth-card">
+          <span className="eyebrow">REALM</span>
+
+          <h1>Entering your REALM...</h1>
+
+          <p className="auth-intro">
+            Checking your authentication session.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  return isAuthenticated
+    ? <Navigate to="/home" replace />
+    : <Navigate to="/login" replace />
+}
+
+function ProtectedRoute({ children }) {
+  const { loading, isAuthenticated } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="auth-page">
+        <div className="auth-card">
+          <span className="eyebrow">REALM</span>
+
+          <h1>Entering your REALM...</h1>
+
+          <p className="auth-intro">
+            Checking your authentication session.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  return children
+}
+
 function App() {
   return (
-    <BrowserRouter>
-      <div className="realm-app">
-        <Sidebar />
+    <AuthProvider>
+      <BrowserRouter>
+        <div className="realm-app">
+          <Sidebar />
 
-        <main className="realm-main">
-          <div className="realm-content">
-            <Routes>
-              {/* Home */}
-              <Route
-                path="/"
-                element={<Home />}
-              />
+          <main className="realm-main">
+            <div className="realm-content">
+              <Routes>
+  <Route
+    path="/"
+    element={<RootRoute />}
+  />
 
-              <Route
-                path="/home"
-                element={<Home />}
-              />
+  <Route
+    path="/login"
+    element={<Login />}
+  />
 
-              {/* Main navigation */}
-              <Route
-                path="/explore"
-                element={<Explore />}
-              />
+  <Route
+    path="/register"
+    element={<Register />}
+  />
 
-              <Route
-                path="/my-worlds"
-                element={<Worlds />}
-              />
+  <Route
+    path="/home"
+    element={
+      <ProtectedRoute>
+        <Home />
+      </ProtectedRoute>
+    }
+  />
 
-              {/* Compatibility route */}
-              <Route
-                path="/worlds"
-                element={<Worlds />}
-              />
+  <Route
+    path="/explore"
+    element={
+      <ProtectedRoute>
+        <Explore />
+      </ProtectedRoute>
+    }
+  />
 
-              {/* Create */}
-              <Route
-                path="/create"
-                element={<CreateHub />}
-              />
+  <Route
+    path="/my-worlds"
+    element={
+      <ProtectedRoute>
+        <Worlds />
+      </ProtectedRoute>
+    }
+  />
 
-              <Route
-                path="/create-world"
-                element={<CreateWorld />}
-              />
+  <Route
+    path="/worlds"
+    element={
+      <ProtectedRoute>
+        <Worlds />
+      </ProtectedRoute>
+    }
+  />
 
-              <Route
-                path="/create-creation"
-                element={<CreateCreation />}
-              />
+  <Route
+    path="/create"
+    element={
+      <ProtectedRoute>
+        <CreateHub />
+      </ProtectedRoute>
+    }
+  />
 
-              {/* World */}
-              <Route
-                path="/world/:slug"
-                element={<World />}
-              />
+  <Route
+    path="/create-world"
+    element={
+      <ProtectedRoute>
+        <CreateWorld />
+      </ProtectedRoute>
+    }
+  />
 
-              {/* Creation */}
-              <Route
-                path="/creation/:slug"
-                element={<Creation />}
-              />
+  <Route
+    path="/create-creation"
+    element={
+      <ProtectedRoute>
+        <CreateCreation />
+      </ProtectedRoute>
+    }
+  />
 
-              <Route
-  path="/creation/:slug/edit"
-  element={<EditCreation />}
-/>
+  <Route
+    path="/world/:slug"
+    element={
+      <ProtectedRoute>
+        <World />
+      </ProtectedRoute>
+    }
+  />
 
-              {/* AI */}
-              <Route
-                path="/ai"
-                element={<AI />}
-              />
+  <Route
+    path="/creation/:slug"
+    element={
+      <ProtectedRoute>
+        <Creation />
+      </ProtectedRoute>
+    }
+  />
 
-              {/* Profile */}
-              <Route
-                path="/profile"
-                element={<Profile />}
-              />
+  <Route
+    path="/creation/:slug/edit"
+    element={
+      <ProtectedRoute>
+        <EditCreation />
+      </ProtectedRoute>
+    }
+  />
 
-              {/* Settings */}
-              <Route
-                path="/settings"
-                element={<Settings />}
-              />
-            </Routes>
-          </div>
+  <Route
+    path="/ai"
+    element={
+      <ProtectedRoute>
+        <AI />
+      </ProtectedRoute>
+    }
+  />
 
-          <footer className="realm-footer">
-            <div className="realm-footer-brand">
-              <RealmLogo />
+  <Route
+    path="/profile"
+    element={
+      <ProtectedRoute>
+        <Profile />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/settings"
+    element={
+      <ProtectedRoute>
+        <Settings />
+      </ProtectedRoute>
+    }
+  />
+</Routes>
             </div>
 
-            <p>
-              Communities where AI makes the community smarter.
-            </p>
+            <footer className="realm-footer">
+              <div className="realm-footer-brand">
+                REALM
+              </div>
 
-            <span className="footer-status">
-              BUILDING REALM • v0.8.1
-            </span>
-          </footer>
-        </main>
-      </div>
-    </BrowserRouter>
+              <p>
+                Communities where AI makes the community smarter.
+              </p>
+
+              <span className="footer-status">
+                BUILDING REALM • v0.8.1
+              </span>
+            </footer>
+          </main>
+        </div>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
 

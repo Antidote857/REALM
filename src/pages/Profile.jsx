@@ -1,17 +1,26 @@
+
 import { Link } from 'react-router-dom'
 import { ArrowRight, Compass, Globe, Sparkles } from 'lucide-react'
 import { getWorlds } from '../data/worldStore'
 import { getCreations } from '../data/creationStore'
-import { getProfile } from '../data/profileStore'
+import { useAuth } from '../context/AuthContext'
 
 function Profile() {
   const worlds = getWorlds()
   const creations = getCreations()
-  const profile = getProfile()
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <section className="profile-page">
+        <p>Loading profile...</p>
+      </section>
+    )
+  }
 
   const name =
-    profile.displayName ||
-    profile.username ||
+    user?.displayName ||
+    user?.username ||
     'Unnamed'
 
   return (
@@ -25,12 +34,12 @@ function Profile() {
           </div>
 
           <div>
-  <h1>{name}</h1>
+            <h1>{name}</h1>
 
-  <p>
-    {profile.bio || 'Your REALM identity.'}
-  </p>
-</div>
+            <p>
+              {user?.bio || 'Your REALM identity.'}
+            </p>
+          </div>
         </div>
 
         <p className="profile-intro">
@@ -90,7 +99,8 @@ function Profile() {
             className="profile-action-card"
           >
             <div className="profile-action-icon">
-              <Compass size={20} />
+              <Compass size={20}
+            />
             </div>
 
             <div>
@@ -141,3 +151,4 @@ function Profile() {
 }
 
 export default Profile
+

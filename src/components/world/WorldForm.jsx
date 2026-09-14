@@ -1,8 +1,18 @@
-import React, { useEffect, useState } from 'react'
-import { Check, Globe, Loader2, Lock, Upload, X } from 'lucide-react'
 
+import React, { useEffect, useState } from 'react'
+
+import {
+  Check,
+  Globe,
+  Loader2,
+  Lock,
+  Sparkles,
+  Upload,
+  X,
+} from 'lucide-react'
 
 import { saveWorld } from '../../data/worldStore'
+import { useNavigate } from 'react-router-dom'
 
 export default function WorldForm({
   mode = 'create',
@@ -11,11 +21,14 @@ export default function WorldForm({
   submitLabel,
 }) {
   const isCreate = mode === 'create'
+  const navigate = useNavigate()
 
   const [name, setName] = useState(world?.name || '')
   const [slug, setSlug] = useState(world?.slug || '')
   const [slugTouched, setSlugTouched] = useState(false)
-  const [description, setDescription] = useState(world?.description || '')
+  const [description, setDescription] = useState(
+    world?.description || ''
+  )
   const [avatar, setAvatar] = useState(world?.avatar || '')
   const [banner, setBanner] = useState(world?.banner || '')
   const [visibility, setVisibility] = useState(
@@ -26,6 +39,10 @@ export default function WorldForm({
   const [uploadingField, setUploadingField] = useState(null)
   const [error, setError] = useState('')
   const [slugStatus, setSlugStatus] = useState(null)
+
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState('')
+  const [aiSuggestions, setAiSuggestions] = useState(null)
 
   useEffect(() => {
     if (!isCreate) return
@@ -77,11 +94,99 @@ export default function WorldForm({
     }
 
     reader.onerror = () => {
-      setError(`Failed to upload ${field}. Please try again.`)
+      setError(
+        `Failed to upload ${field}. Please try again.`
+      )
       setUploadingField(null)
     }
 
     reader.readAsDataURL(file)
+  }
+
+  const handleAIAssist = async () => {
+    const trimmedName = name.trim()
+    const trimmedDescription = description.trim()
+
+    if (!trimmedName && !trimmedDescription) {
+      setAiError(
+        'Add a World name or description before asking AI to assist.'
+      )
+      return
+    }
+
+    setAiLoading(true)
+    setAiError('')
+    setAiSuggestions(null)
+
+    try {
+      const response = await fetch(
+        'http://localhost:3001/api/ai/assist-world',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: trimmedName,
+            description: trimmedDescription,
+          }),
+        }
+      )
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            'REALM AI could not assist with this World.'
+        )
+      }
+
+      if (
+        typeof result?.suggestedName !== 'string' ||
+        typeof result?.suggestedDescription !== 'string'
+      ) {
+        throw new Error(
+          'REALM AI returned an invalid assistance response.'
+        )
+      }
+
+      setAiSuggestions({
+        suggestedName:
+          result.suggestedName.trim(),
+        suggestedDescription:
+          result.suggestedDescription.trim(),
+      })
+    } catch (assistError) {
+      console.error(
+        'World AI Assist error:',
+        assistError
+      )
+
+      setAiError(
+        assistError?.message ||
+          'REALM AI could not assist with this World. Please try again.'
+      )
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const applyAISuggestions = () => {
+    if (!aiSuggestions) return
+
+    setName(aiSuggestions.suggestedName)
+    setDescription(
+      aiSuggestions.suggestedDescription
+    )
+
+    setAiSuggestions(null)
+    setAiError('')
+  }
+
+  const keepMyWorldText = () => {
+    setAiSuggestions(null)
+    setAiError('')
   }
 
   const handleSubmit = async (event) => {
@@ -89,13 +194,18 @@ export default function WorldForm({
 
     setError('')
 
-    if (name.trim().length < 3 || name.trim().length > 60) {
+    if (
+      name.trim().length < 3 ||
+      name.trim().length > 60
+    ) {
       setError('Name must be 3-60 characters')
       return
     }
 
     if (description.length > 500) {
-      setError('Description must be 500 characters or fewer')
+      setError(
+        'Description must be 500 characters or fewer'
+      )
       return
     }
 
@@ -108,7 +218,10 @@ export default function WorldForm({
       }
 
       if (slugStatus?.valid === false) {
-        setError(slugStatus.reason || 'That slug is already taken')
+        setError(
+          slugStatus.reason ||
+            'That slug is already taken'
+        )
         return
       }
     }
@@ -123,40 +236,56 @@ export default function WorldForm({
        * connected later without redesigning the form.
        */
       const resultWorld = {
-  ...(world || {}),
-  name: name.trim(),
-  slug: slug.toLowerCase(),
-  description: description.trim(),
-  visibility,
-  ...(isCreate && !world?.createdAt
-    ? { createdAt: new Date().toISOString() }
-    : {}),
-  ...(avatar ? { avatar } : {}),
-  ...(banner ? { banner } : {}),
-}
+        ...(world || {}),
+        name: name.trim(),
+        slug: slug.toLowerCase(),
+        description: description.trim(),
+        visibility,
+        ...(isCreate && !world?.createdAt
+          ? {
+              createdAt:
+                new Date().toISOString(),
+            }
+          : {}),
+        ...(avatar ? { avatar } : {}),
+        ...(banner ? { banner } : {}),
+      }
 
       // Small delay preserves the Base44 loading interaction visually.
-      await new Promise((resolve) => setTimeout(resolve, 350))
+      await new Promise((resolve) =>
+        setTimeout(resolve, 350)
+      )
 
-const savedWorld = saveWorld({
-  ...resultWorld,
-  id: resultWorld.id || crypto.randomUUID(),
-  category: resultWorld.category || 'Community',
-  members: resultWorld.members || 1,
-  creations: resultWorld.creations || 0,
-  featured: resultWorld.featured || false,
-})
+      const savedWorld = saveWorld({
+        ...resultWorld,
+        id:
+          resultWorld.id ||
+          crypto.randomUUID(),
+        category:
+          resultWorld.category || 'Community',
+        members:
+          resultWorld.members || 1,
+        creations:
+          resultWorld.creations || 0,
+        featured:
+          resultWorld.featured || false,
+      })
 
-onSuccess?.(savedWorld)
+      onSuccess?.(savedWorld)
     } catch (err) {
-      setError(err.message || 'Something went wrong')
+      setError(
+        err.message || 'Something went wrong'
+      )
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="world-form">
+    <form
+      onSubmit={handleSubmit}
+      className="world-form"
+    >
       {error && (
         <div className="world-form-error">
           {error}
@@ -184,7 +313,10 @@ onSuccess?.(savedWorld)
         <label className="world-upload-button">
           <span>
             {uploadingField === 'banner' ? (
-              <Loader2 size={16} className="world-spin" />
+              <Loader2
+                size={16}
+                className="world-spin"
+              />
             ) : (
               <Upload size={16} />
             )}
@@ -199,7 +331,10 @@ onSuccess?.(savedWorld)
             accept="image/*"
             className="world-hidden-input"
             onChange={(event) =>
-              handleImageUpload(event, 'banner')
+              handleImageUpload(
+                event,
+                'banner'
+              )
             }
           />
         </label>
@@ -215,14 +350,19 @@ onSuccess?.(savedWorld)
               className="world-avatar-image"
             />
           ) : (
-            (name || 'W').charAt(0).toUpperCase()
+            (name || 'W')
+              .charAt(0)
+              .toUpperCase()
           )}
         </div>
 
         <label className="world-upload-button">
           <span>
             {uploadingField === 'avatar' ? (
-              <Loader2 size={16} className="world-spin" />
+              <Loader2
+                size={16}
+                className="world-spin"
+              />
             ) : (
               <Upload size={16} />
             )}
@@ -237,7 +377,10 @@ onSuccess?.(savedWorld)
             accept="image/*"
             className="world-hidden-input"
             onChange={(event) =>
-              handleImageUpload(event, 'avatar')
+              handleImageUpload(
+                event,
+                'avatar'
+              )
             }
           />
         </label>
@@ -282,7 +425,9 @@ onSuccess?.(savedWorld)
               id="world-slug"
               value={slug}
               onChange={(event) => {
-                setSlug(event.target.value.toLowerCase())
+                setSlug(
+                  event.target.value.toLowerCase()
+                )
                 setSlugTouched(true)
               }}
               className="world-form-input world-slug-input"
@@ -318,7 +463,8 @@ onSuccess?.(savedWorld)
           )}
 
           <p className="world-form-help">
-            3-30 characters: lowercase letters, numbers, and hyphens.
+            3-30 characters: lowercase letters,
+            numbers, and hyphens.
           </p>
         </div>
       )}
@@ -349,6 +495,98 @@ onSuccess?.(savedWorld)
         </p>
       </div>
 
+      {/* AI Assist */}
+      <div className="world-ai-assist">
+        <div className="world-ai-assist-header">
+          <div>
+            <span className="world-form-label">
+              AI Assist
+            </span>
+
+            <p className="world-form-help">
+              Get help refining your World name
+              and description.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="world-ai-assist-button"
+            onClick={handleAIAssist}
+            disabled={
+              aiLoading || loading
+            }
+          >
+            {aiLoading ? (
+              <>
+                <Loader2
+                  size={16}
+                  className="world-spin"
+                />
+                Thinking…
+              </>
+            ) : (
+              <>
+                <Sparkles size={16} />
+                Assist with AI
+              </>
+            )}
+          </button>
+        </div>
+
+        {aiError && (
+          <div className="world-ai-assist-error">
+            {aiError}
+          </div>
+        )}
+
+        {aiSuggestions && (
+          <div className="world-ai-assist-result">
+            <div className="world-ai-assist-result-label">
+              REALM AI SUGGESTIONS
+            </div>
+
+            <div className="world-ai-suggestion">
+              <strong>World name</strong>
+              <p>
+                {aiSuggestions.suggestedName}
+              </p>
+            </div>
+
+            <div className="world-ai-suggestion">
+              <strong>Description</strong>
+              <p>
+                {
+                  aiSuggestions.suggestedDescription
+                }
+              </p>
+            </div>
+
+            <div className="world-ai-assist-actions">
+              <button
+                type="button"
+                className="world-ai-apply-button"
+                onClick={
+                  applyAISuggestions
+                }
+              >
+                Apply suggestions
+              </button>
+
+              <button
+                type="button"
+                className="world-ai-keep-button"
+                onClick={
+                  keepMyWorldText
+                }
+              >
+                Keep my text
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Visibility */}
       <div className="world-form-field">
         <label className="world-form-label">
@@ -357,16 +595,24 @@ onSuccess?.(savedWorld)
 
         <div className="world-visibility-grid">
           <VisibilityOption
-            active={visibility === 'public'}
-            onClick={() => setVisibility('public')}
+            active={
+              visibility === 'public'
+            }
+            onClick={() =>
+              setVisibility('public')
+            }
             icon={Globe}
             title="Public"
             desc="Anyone can view and join"
           />
 
           <VisibilityOption
-            active={visibility === 'private'}
-            onClick={() => setVisibility('private')}
+            active={
+              visibility === 'private'
+            }
+            onClick={() =>
+              setVisibility('private')
+            }
             icon={Lock}
             title="Private"
             desc="Join requests need approval"
@@ -378,17 +624,26 @@ onSuccess?.(savedWorld)
       <div className="world-form-actions">
         <button
           type="submit"
-          disabled={loading || uploadingField}
+          disabled={
+            loading || uploadingField
+          }
           className="world-submit-button"
         >
           {loading ? (
             <>
-              <Loader2 size={16} className="world-spin" />
-              {isCreate ? 'Creating…' : 'Saving…'}
+              <Loader2
+                size={16}
+                className="world-spin"
+              />
+              {isCreate
+                ? 'Creating…'
+                : 'Saving…'}
             </>
           ) : (
             submitLabel ||
-            (isCreate ? 'Create World' : 'Save changes')
+            (isCreate
+              ? 'Create World'
+              : 'Save changes')
           )}
         </button>
       </div>
@@ -434,7 +689,12 @@ function slugify(value) {
 }
 
 function isValidSlug(value) {
-  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) &&
+  return (
+    /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(
+      value
+    ) &&
     value.length >= 3 &&
     value.length <= 30
+  )
 }
+

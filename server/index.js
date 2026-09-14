@@ -16,7 +16,12 @@ const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 })
 
-app.use(cors())
+app.use(
+  cors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+  })
+)
 app.use(express.json())
 
 function setSessionCookie(res, sessionId, maxAge) {
@@ -114,6 +119,205 @@ app.get('/api/auth/me', (req, res) => {
     })
   }
 })
+
+// World AI Assist endpoint
+app.post(
+  '/api/ai/assist-world',
+  async (req, res) => {
+    try {
+      const {
+        name = '',
+        description = '',
+      } = req.body
+
+      const trimmedName =
+        name.trim()
+
+      const trimmedDescription =
+        description.trim()
+
+      if (
+        !trimmedName &&
+        !trimmedDescription
+      ) {
+        return res.status(400).json({
+          error:
+            'A World name or description is required for AI assistance.',
+        })
+      }
+
+      const assistPrompt = `
+You are REALM AI assisting a user who is creating
+or editing a World on the REALM community platform.
+
+Your task is to help refine the user's existing
+World name and description.
+
+CURRENT WORLD:
+
+Name: ${
+        trimmedName || 'Not provided'
+      }
+
+Description:
+
+${
+        trimmedDescription ||
+        'Not provided'
+      }
+
+RULES:
+
+1. Preserve the user's original idea and meaning.
+
+2. Do not invent facts, achievements, statistics,
+   experiences, members, partnerships, features,
+   organizations, or claims.
+
+3. Do not introduce information that is not present
+   in the user's World name or description.
+
+4. Make the World name clearer, distinctive, and
+   engaging without changing what the World is about.
+
+5. Make the description clearer, useful, and easy
+   to understand.
+
+6. Keep the suggested description concise.
+
+7. The World should be described as a community,
+   space, or environment where people can gather
+   around the idea expressed by the user.
+
+8. Return ONLY valid JSON.
+
+9. Do not use Markdown.
+
+10. Do not use asterisks, backticks, or commentary
+    outside the JSON.
+
+Return exactly this structure:
+
+{
+  "suggestedName": "string",
+  "suggestedDescription": "string"
+}
+`
+
+      let lastError = null
+
+      for (const model of MODELS) {
+        try {
+          console.log(
+            `Trying Gemini model for World AI Assist: ${model}`
+          )
+
+          const response =
+            await ai.models.generateContent({
+              model,
+              contents:
+                'Generate the World refinement suggestions now.',
+              config: {
+                systemInstruction:
+                  assistPrompt,
+                responseMimeType:
+                  'application/json',
+              },
+            })
+
+          console.log(
+            `World AI Assist response received from: ${model}`
+          )
+
+          let suggestions
+
+          try {
+            const parsed =
+              JSON.parse(response.text)
+
+            if (
+              typeof parsed.suggestedName !==
+                'string' ||
+              typeof parsed.suggestedDescription !==
+                'string'
+            ) {
+              throw new Error(
+                'REALM AI response is missing required fields.'
+              )
+            }
+
+            suggestions = {
+              suggestedName:
+                parsed.suggestedName.trim(),
+
+              suggestedDescription:
+                parsed.suggestedDescription.trim(),
+            }
+          } catch (parseError) {
+            console.error(
+              'World AI Assist response validation failed:',
+              parseError
+            )
+
+            return res.status(502).json({
+              error:
+                'REALM AI returned an invalid assistance response. Please try again.',
+            })
+          }
+
+          return res.json({
+            suggestedName:
+              suggestions.suggestedName,
+
+            suggestedDescription:
+              suggestions.suggestedDescription,
+          })
+        } catch (error) {
+          lastError = error
+
+          console.error(
+            `Gemini model ${model} failed for World AI Assist:`,
+            error.status ||
+              error.message
+          )
+
+          if (
+            error.status !== 503 &&
+            error.status !== 429
+          ) {
+            throw error
+          }
+        }
+      }
+
+      throw lastError
+    } catch (error) {
+      console.error(
+        'World AI Assist error:',
+        error
+      )
+
+      if (error.status === 429) {
+        return res.status(429).json({
+          error:
+            'REALM AI is temporarily busy due to API usage limits. Please try again shortly.',
+        })
+      }
+
+      if (error.status === 503) {
+        return res.status(503).json({
+          error:
+            'REALM AI is temporarily unavailable. Please try again shortly.',
+        })
+      }
+
+      return res.status(500).json({
+        error:
+          'REALM AI could not assist with this World. Please try again.',
+      })
+    }
+  }
+)
 
 app.post('/api/auth/logout', (req, res) => {
   try {

@@ -1,5 +1,4 @@
-
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Sparkles } from 'lucide-react'
 import {
   discoverCreations,
@@ -15,7 +14,6 @@ import {
   sortWorldsByMode,
 } from '../utils/discovery'
 import { getCreations } from '../data/creationStore'
-import { getWorlds } from '../data/worldStore'
 import CreationCard from '../components/CreationCard'
 import WorldCard from '../components/WorldCard'
 
@@ -51,8 +49,72 @@ function Explore() {
   const [topic, setTopic] =
     useState('all')
 
+  const [allWorlds, setAllWorlds] =
+    useState([])
+
+  const [worldsLoading, setWorldsLoading] =
+    useState(true)
+
+  const [worldsError, setWorldsError] =
+    useState('')
+
+  useEffect(() => {
+    let mounted = true
+
+    async function loadWorlds() {
+      try {
+        setWorldsLoading(true)
+        setWorldsError('')
+
+        const response = await fetch(
+          'http://localhost:3001/api/worlds',
+          {
+            credentials: 'include',
+          }
+        )
+
+        const result = await response.json()
+
+        if (!response.ok) {
+          throw new Error(
+            result.error ||
+              'Failed to load Worlds'
+          )
+        }
+
+        if (mounted) {
+          setAllWorlds(
+            result.worlds || []
+          )
+        }
+      } catch (error) {
+        console.error(
+          'Failed to load Worlds for Explore:',
+          error
+        )
+
+        if (mounted) {
+          setAllWorlds([])
+          setWorldsError(
+            error.message ||
+              'Failed to load Worlds'
+          )
+        }
+      } finally {
+        if (mounted) {
+          setWorldsLoading(false)
+        }
+      }
+    }
+
+    loadWorlds()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
   const allCreations = getCreations()
-  const allWorlds = getWorlds()
 
   const worldCategories =
     getWorldCategories(allWorlds)
@@ -296,7 +358,15 @@ function Explore() {
           </span>
         </div>
 
-        {displayedWorlds.length > 0 ? (
+        {worldsLoading ? (
+          <div className="empty-state">
+            <p>Loading Worlds...</p>
+          </div>
+        ) : worldsError ? (
+          <div className="empty-state">
+            <p>{worldsError}</p>
+          </div>
+        ) : displayedWorlds.length > 0 ? (
           <div className="worlds-grid">
             {displayedWorlds.map(
               (world) => (
@@ -356,4 +426,3 @@ function Explore() {
 }
 
 export default Explore
-

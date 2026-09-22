@@ -56,6 +56,54 @@ function getSessionIdFromRequest(req) {
   return decodeURIComponent(sessionCookie.split('=').slice(1).join('='))
 }
 
+function getAuthenticatedUser(req) {
+  const sessionId = getSessionIdFromRequest(req)
+
+  if (!sessionId) {
+    return null
+  }
+
+  const session = db
+    .prepare(`
+      SELECT
+        sessions.id,
+        sessions.user_id,
+        sessions.expires_at,
+        users.username,
+        users.display_name,
+        users.email,
+        users.bio,
+        users.avatar,
+        users.created_at
+      FROM sessions
+      JOIN users ON users.id = sessions.user_id
+      WHERE sessions.id = ?
+    `)
+    .get(sessionId)
+
+  if (!session) {
+    return null
+  }
+
+  const expiresAt = new Date(session.expires_at)
+
+  if (expiresAt <= new Date()) {
+    db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId)
+
+    return null
+  }
+
+  return {
+    id: session.user_id,
+    username: session.username,
+    displayName: session.display_name,
+    email: session.email,
+    bio: session.bio,
+    avatar: session.avatar,
+    createdAt: session.created_at,
+  }
+}
+
 app.get('/api/auth/me', (req, res) => {
   try {
     const sessionId = getSessionIdFromRequest(req)
@@ -93,7 +141,9 @@ app.get('/api/auth/me', (req, res) => {
     const expiresAt = new Date(session.expires_at)
 
     if (expiresAt <= new Date()) {
-      db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId)
+      db.prepare(
+        'DELETE FROM sessions WHERE id = ?'
+      ).run(sessionId)
 
       return res.status(401).json({
         error: 'Session expired',
@@ -112,13 +162,380 @@ app.get('/api/auth/me', (req, res) => {
       },
     })
   } catch (error) {
-    console.error('Failed to retrieve authenticated user:', error)
+    console.error(
+      'Failed to retrieve authenticated user:',
+      error
+    )
 
     return res.status(500).json({
       error: 'Failed to retrieve authenticated user',
     })
   }
 })
+
+
+// ============================================================
+// REALM WORLDS API
+// ============================================================
+
+// Get all public Worlds
+app.get('/api/worlds', (req, res) => {
+  try {
+    const worlds = db
+      .prepare(`
+        SELECT
+          worlds.id,
+          worlds.owner_id,
+          worlds.slug,
+          worlds.name,
+          worlds.description,
+          worlds.category,
+          worlds.visibility,
+          worlds.featured,
+          worlds.created_at,
+          worlds.updated_at,
+
+          (
+            SELECT COUNT(*)
+            FROM world_members
+            WHERE world_members.world_id = worlds.id
+          ) AS members,
+
+          0 AS creations
+
+        FROM worlds
+
+        WHERE worlds.visibility = 'public'
+
+        ORDER BY worlds.created_at DESC
+      `)
+      .all()
+
+    return res.json({
+      worlds,
+    })
+  } catch (error) {
+    console.error(
+      'Failed to retrieve Worlds:',
+      error
+    )
+
+    return res.status(500).json({
+      error: 'Failed to retrieve Worlds',
+    })
+  }
+})
+
+
+// Get a single World by slug
+app.get('/api/worlds/:slug', (req, res) => {
+  try {
+    const { slug } = req.params
+
+    const user = getAuthenticatedUser(req)
+
+    const world = db
+      .prepare(`
+        SELECT
+          worlds.id,
+          worlds.owner_id,
+          worlds.slug,
+          worlds.name,
+          worlds.description,
+          worlds.category,
+          worlds.visibility,
+          worlds.featured,
+          worlds.created_at,
+          worlds.updated_at,
+
+          (
+            SELECT COUNT(*)
+            FROM world_members
+            WHERE world_members.world_id = worlds.id
+          ) AS members,
+
+          0 AS creations
+
+        FROM worlds
+
+        WHERE worlds.slug = ?
+
+        AND (
+          worlds.visibility = 'public'
+          OR worlds.owner_id = ?
+        )
+      `)
+      .get(
+        slug,
+        user?.id || ''
+      )
+
+    if (!world) {
+      return res.status(404).json({
+        error: 'World not found',
+      })
+    }
+
+    return res.json({
+      world,
+    })
+  } catch (error) {
+    console.error(
+      'Failed to retrieve World:',
+      error
+    )
+
+    return res.status(500).json({
+      error: 'Failed to retrieve World',
+    })
+  }
+})
+
+
+// Create a new World
+app.post('/api/worlds', (req, res) => {
+  try {
+    const user = getAuthenticatedUser(req)
+
+    if (!user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+      })
+    }
+
+    const {
+      name,
+      description = '',
+      category = 'Community',
+      visibility = 'public',
+    } = req.body
+
+    const trimmedName = String(name || '').trim()
+    const trimmedDescription =
+      String(description || '').trim()
+    const trimmedCategory =
+      String(category || 'Community').trim()
+
+    if (
+      trimmedName.length < 3 ||
+      trimmedName.length > 60
+    ) {
+      return res.status(400).json({
+        error:
+          'World name must be between 3 and 60 characters',
+      })
+    }
+
+    if (trimmedDescription.length > 500) {
+      return res.status(400).json({
+        error:
+          'World description must be 500 characters or fewer',
+      })
+    }
+
+    if (
+      !['public', 'private'].includes(
+        visibility
+      )
+    ) {
+      return res.status(400).json({
+        error:
+          'World visibility must be public or private',
+      })
+    }
+
+    const baseSlug = trimmedName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 30)
+
+    if (baseSlug.length < 3) {
+      return res.status(400).json({
+        error:
+          'World name must produce a valid slug',
+      })
+    }
+
+    let slug = baseSlug
+    let suffix = 2
+
+    while (
+      db
+        .prepare(
+          'SELECT id FROM worlds WHERE slug = ?'
+        )
+        .get(slug)
+    ) {
+      const suffixText = `-${suffix}`
+
+      slug =
+        `${baseSlug.slice(
+          0,
+          30 - suffixText.length
+        )}${suffixText}`
+
+      suffix += 1
+    }
+
+    const worldId = crypto.randomUUID()
+    const now = new Date().toISOString()
+
+    const createWorld = db.transaction(() => {
+      db.prepare(`
+        INSERT INTO worlds (
+          id,
+          owner_id,
+          slug,
+          name,
+          description,
+          category,
+          visibility,
+          featured,
+          created_at,
+          updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        worldId,
+        user.id,
+        slug,
+        trimmedName,
+        trimmedDescription,
+        trimmedCategory || 'Community',
+        visibility,
+        0,
+        now,
+        now
+      )
+
+      db.prepare(`
+        INSERT INTO world_members (
+          world_id,
+          user_id,
+          role,
+          joined_at
+        )
+        VALUES (?, ?, ?, ?)
+      `).run(
+        worldId,
+        user.id,
+        'owner',
+        now
+      )
+    })
+
+    createWorld()
+
+    const world = db
+      .prepare(`
+        SELECT
+          worlds.id,
+          worlds.owner_id,
+          worlds.slug,
+          worlds.name,
+          worlds.description,
+          worlds.category,
+          worlds.visibility,
+          worlds.featured,
+          worlds.created_at,
+          worlds.updated_at,
+
+          (
+            SELECT COUNT(*)
+            FROM world_members
+            WHERE world_members.world_id = worlds.id
+          ) AS members,
+
+          0 AS creations
+
+        FROM worlds
+
+        WHERE worlds.id = ?
+      `)
+      .get(worldId)
+
+    return res.status(201).json({
+      world,
+    })
+  } catch (error) {
+    console.error(
+      'Failed to create World:',
+      error
+    )
+
+    return res.status(500).json({
+      error: 'Failed to create World',
+    })
+  }
+})
+
+
+// Join a public World
+app.post('/api/worlds/:id/join', (req, res) => {
+  try {
+    const user = getAuthenticatedUser(req)
+
+    if (!user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+      })
+    }
+
+    const { id } = req.params
+
+    const world = db
+      .prepare(`
+        SELECT
+          id,
+          visibility
+        FROM worlds
+        WHERE id = ?
+      `)
+      .get(id)
+
+    if (!world) {
+      return res.status(404).json({
+        error: 'World not found',
+      })
+    }
+
+    if (world.visibility !== 'public') {
+      return res.status(403).json({
+        error: 'This World is private',
+      })
+    }
+
+    db.prepare(`
+      INSERT OR IGNORE INTO world_members (
+        world_id,
+        user_id,
+        role,
+        joined_at
+      )
+      VALUES (?, ?, 'member', ?)
+    `).run(
+      id,
+      user.id,
+      new Date().toISOString()
+    )
+
+    return res.json({
+      success: true,
+      message: 'Joined World',
+    })
+  } catch (error) {
+    console.error(
+      'Failed to join World:',
+      error
+    )
+
+    return res.status(500).json({
+      error: 'Failed to join World',
+    })
+  }
+})
+
 
 // World AI Assist endpoint
 app.post(
@@ -349,6 +766,8 @@ app.post('/api/auth/logout', (req, res) => {
     })
   }
 })
+
+
 
 // Health check
 app.get('/api/health', (req, res) => {

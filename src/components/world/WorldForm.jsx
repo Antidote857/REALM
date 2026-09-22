@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react'
 
 import {
@@ -11,9 +10,6 @@ import {
   X,
 } from 'lucide-react'
 
-import { saveWorld } from '../../data/worldStore'
-import { useNavigate } from 'react-router-dom'
-
 export default function WorldForm({
   mode = 'create',
   world,
@@ -21,7 +17,6 @@ export default function WorldForm({
   submitLabel,
 }) {
   const isCreate = mode === 'create'
-  const navigate = useNavigate()
 
   const [name, setName] = useState(world?.name || '')
   const [slug, setSlug] = useState(world?.slug || '')
@@ -126,6 +121,7 @@ export default function WorldForm({
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'include',
           body: JSON.stringify({
             name: trimmedName,
             description: trimmedDescription,
@@ -180,6 +176,12 @@ export default function WorldForm({
       aiSuggestions.suggestedDescription
     )
 
+    if (isCreate && !slugTouched) {
+      setSlug(
+        slugify(aiSuggestions.suggestedName)
+      )
+    }
+
     setAiSuggestions(null)
     setAiError('')
   }
@@ -194,15 +196,18 @@ export default function WorldForm({
 
     setError('')
 
+    const trimmedName = name.trim()
+    const trimmedDescription = description.trim()
+
     if (
-      name.trim().length < 3 ||
-      name.trim().length > 60
+      trimmedName.length < 3 ||
+      trimmedName.length > 60
     ) {
       setError('Name must be 3-60 characters')
       return
     }
 
-    if (description.length > 500) {
+    if (trimmedDescription.length > 500) {
       setError(
         'Description must be 500 characters or fewer'
       )
@@ -220,7 +225,7 @@ export default function WorldForm({
       if (slugStatus?.valid === false) {
         setError(
           slugStatus.reason ||
-            'That slug is already taken'
+            'Please enter a valid slug.'
         )
         return
       }
@@ -229,52 +234,51 @@ export default function WorldForm({
     setLoading(true)
 
     try {
-      /*
-       * Local REALM foundation:
-       * The Base44 version sends this payload to the backend.
-       * We keep the same payload shape here so the backend can be
-       * connected later without redesigning the form.
-       */
-      const resultWorld = {
-        ...(world || {}),
-        name: name.trim(),
-        slug: slug.toLowerCase(),
-        description: description.trim(),
-        visibility,
-        ...(isCreate && !world?.createdAt
-          ? {
-              createdAt:
-                new Date().toISOString(),
-            }
-          : {}),
-        ...(avatar ? { avatar } : {}),
-        ...(banner ? { banner } : {}),
-      }
-
-      // Small delay preserves the Base44 loading interaction visually.
-      await new Promise((resolve) =>
-        setTimeout(resolve, 350)
+      const response = await fetch(
+        'http://localhost:3001/api/worlds',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            name: trimmedName,
+            description: trimmedDescription,
+            category:
+              world?.category || 'Community',
+            visibility,
+          }),
+        }
       )
 
-      const savedWorld = saveWorld({
-        ...resultWorld,
-        id:
-          resultWorld.id ||
-          crypto.randomUUID(),
-        category:
-          resultWorld.category || 'Community',
-        members:
-          resultWorld.members || 1,
-        creations:
-          resultWorld.creations || 0,
-        featured:
-          resultWorld.featured || false,
-      })
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            'Failed to create World.'
+        )
+      }
+
+      if (!result?.world) {
+        throw new Error(
+          'The server did not return the created World.'
+        )
+      }
+
+      const savedWorld = result.world
 
       onSuccess?.(savedWorld)
     } catch (err) {
+      console.error(
+        'World creation error:',
+        err
+      )
+
       setError(
-        err.message || 'Something went wrong'
+        err?.message ||
+          'Something went wrong while creating the World.'
       )
     } finally {
       setLoading(false)
@@ -697,4 +701,3 @@ function isValidSlug(value) {
     value.length <= 30
   )
 }
-

@@ -1,4 +1,3 @@
-import { getWorlds } from '../data/worldStore'
 import { getCreations } from '../data/creationStore'
 import { discoverCreations } from './discovery'
 
@@ -21,8 +20,7 @@ function buildGlobalContext(worlds, creations) {
   }
 }
 
-export function getAIContext(searchParams) {
-  const worlds = getWorlds()
+export function getAIContext(searchParams, worlds = []) {
   const creations = getCreations()
 
   const context = searchParams.get('context')

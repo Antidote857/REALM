@@ -1,16 +1,57 @@
-
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Compass, Globe, Sparkles } from 'lucide-react'
-import { getWorlds } from '../data/worldStore'
 import { getCreations } from '../data/creationStore'
 import { useAuth } from '../context/AuthContext'
 
 function Profile() {
-  const worlds = getWorlds()
+  const [worlds, setWorlds] = useState([])
+  const [worldsLoading, setWorldsLoading] = useState(true)
+  const [worldsError, setWorldsError] = useState('')
+
   const creations = getCreations()
   const { user, loading } = useAuth()
 
-  if (loading) {
+  useEffect(() => {
+    if (loading || !user) return
+
+    async function loadWorlds() {
+      try {
+        setWorldsLoading(true)
+        setWorldsError('')
+
+        const response = await fetch(
+          'http://localhost:3001/api/worlds',
+          {
+            credentials: 'include',
+          }
+        )
+
+        const result = await response.json()
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to load Worlds.')
+        }
+
+        const allWorlds = result.worlds || []
+
+        const userWorlds = allWorlds.filter(
+          (world) => world.owner_id === user.id
+        )
+
+        setWorlds(userWorlds)
+      } catch (error) {
+        console.error('Failed to load profile Worlds:', error)
+        setWorldsError(error.message || 'Failed to load Worlds.')
+      } finally {
+        setWorldsLoading(false)
+      }
+    }
+
+    loadWorlds()
+  }, [loading, user])
+
+  if (loading || worldsLoading) {
     return (
       <section className="profile-page">
         <p>Loading profile...</p>
@@ -49,7 +90,9 @@ function Profile() {
 
       <section className="profile-stats">
         <div className="profile-stat">
-          <strong>{worlds.length}</strong>
+          <strong>
+            {worldsError ? '—' : worlds.length}
+          </strong>
           <span>Worlds</span>
         </div>
 
@@ -63,6 +106,16 @@ function Profile() {
           <span>Community activity</span>
         </div>
       </section>
+
+      {worldsError && (
+        <section className="profile-placeholder">
+          <span>WORLD DATA</span>
+
+          <strong>
+            {worldsError}
+          </strong>
+        </section>
+      )}
 
       <section className="profile-section">
         <div className="profile-section-header">
@@ -99,8 +152,7 @@ function Profile() {
             className="profile-action-card"
           >
             <div className="profile-action-icon">
-              <Compass size={20}
-            />
+              <Compass size={20} />
             </div>
 
             <div>
@@ -151,4 +203,3 @@ function Profile() {
 }
 
 export default Profile
-

@@ -5,8 +5,10 @@ import { buildREALMPrompt } from '../utils/aiPrompt'
 
 function AI() {
   const [searchParams] = useSearchParams()
-  const aiContext = getAIContext(searchParams)
-  const realmPrompt = buildREALMPrompt(searchParams)
+
+  const [worlds, setWorlds] = useState([])
+  const [worldsLoading, setWorldsLoading] = useState(true)
+  const [worldsError, setWorldsError] = useState('')
 
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState([])
@@ -15,94 +17,153 @@ function AI() {
 
   const contextKey = searchParams.toString()
 
- useEffect(() => {
-  let isActive = true
+  useEffect(() => {
+    let isActive = true
 
-  async function loadConversation() {
-    setMessages([])
-    setMessage('')
-    setConversationId(null)
-    setIsLoading(false)
+    async function loadWorlds() {
+      try {
+        setWorldsLoading(true)
+        setWorldsError('')
 
-    const storageKey =
-      `realm-ai-conversation:${contextKey || 'global'}`
-
-    const savedConversationId =
-      localStorage.getItem(storageKey)
-
-    try {
-      if (savedConversationId) {
         const response = await fetch(
-          `http://localhost:3001/api/conversations/${savedConversationId}`
+          'http://localhost:3001/api/worlds',
+          {
+            credentials: 'include',
+          }
         )
 
-        if (response.ok) {
-          const conversation = await response.json()
+        const result = await response.json()
 
-          if (isActive) {
-            setConversationId(conversation.id)
-
-            setMessages(
-              conversation.messages.map((item) => ({
-                id: `${item.id}-${item.created_at}`,
-                role: item.role,
-                content: item.content,
-              }))
-            )
-          }
-
-          return
+        if (!response.ok) {
+          throw new Error(
+            result.error || 'Failed to load Worlds.'
+          )
         }
 
-        localStorage.removeItem(storageKey)
-      }
-
-      const response = await fetch(
-  'http://localhost:3001/api/conversations',
-  {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      contextKey:
-        contextKey || 'global',
-    }),
-  }
-)
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(
-          data.error || 'Could not create conversation.'
-        )
-      }
-
-      if (isActive) {
-        setConversationId(data.conversationId)
-
-        localStorage.setItem(
-          storageKey,
-          data.conversationId
-        )
-      }
-    } catch (error) {
-      if (isActive) {
+        if (isActive) {
+          setWorlds(result.worlds || [])
+        }
+      } catch (error) {
         console.error(
-          'REALM conversation error:',
+          'REALM World context error:',
           error
         )
+
+        if (isActive) {
+          setWorldsError(
+            error.message || 'Failed to load Worlds.'
+          )
+          setWorlds([])
+        }
+      } finally {
+        if (isActive) {
+          setWorldsLoading(false)
+        }
       }
     }
-  }
 
-  loadConversation()
+    loadWorlds()
 
-  return () => {
-    isActive = false
-  }
-}, [contextKey])
+    return () => {
+      isActive = false
+    }
+  }, [])
+
+  const aiContext = getAIContext(
+    searchParams,
+    worlds
+  )
+
+  const realmPrompt = buildREALMPrompt(searchParams)
+
+  useEffect(() => {
+    let isActive = true
+
+    async function loadConversation() {
+      setMessages([])
+      setMessage('')
+      setConversationId(null)
+      setIsLoading(false)
+
+      const storageKey =
+        `realm-ai-conversation:${contextKey || 'global'}`
+
+      const savedConversationId =
+        localStorage.getItem(storageKey)
+
+      try {
+        if (savedConversationId) {
+          const response = await fetch(
+            `http://localhost:3001/api/conversations/${savedConversationId}`
+          )
+
+          if (response.ok) {
+            const conversation = await response.json()
+
+            if (isActive) {
+              setConversationId(conversation.id)
+
+              setMessages(
+                conversation.messages.map((item) => ({
+                  id: `${item.id}-${item.created_at}`,
+                  role: item.role,
+                  content: item.content,
+                }))
+              )
+            }
+
+            return
+          }
+
+          localStorage.removeItem(storageKey)
+        }
+
+        const response = await fetch(
+          'http://localhost:3001/api/conversations',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              contextKey:
+                contextKey || 'global',
+            }),
+          }
+        )
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(
+            data.error || 'Could not create conversation.'
+          )
+        }
+
+        if (isActive) {
+          setConversationId(data.conversationId)
+
+          localStorage.setItem(
+            storageKey,
+            data.conversationId
+          )
+        }
+      } catch (error) {
+        if (isActive) {
+          console.error(
+            'REALM conversation error:',
+            error
+          )
+        }
+      }
+    }
+
+    loadConversation()
+
+    return () => {
+      isActive = false
+    }
+  }, [contextKey])
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -140,12 +201,12 @@ function AI() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-  prompt: realmPrompt,
-  message: trimmedMessage,
-  conversationId,
-  contextKey:
-    contextKey || 'global',
-}),
+            prompt: realmPrompt,
+            message: trimmedMessage,
+            conversationId,
+            contextKey:
+              contextKey || 'global',
+          }),
         }
       )
 
@@ -186,6 +247,24 @@ function AI() {
     }
   }
 
+  if (worldsLoading) {
+    return (
+      <main className="ai-page">
+        <section className="ai-hero">
+          <span className="eyebrow">
+            REALM AI
+          </span>
+
+          <h1>Loading REALM context...</h1>
+
+          <p>
+            Preparing the latest World information for REALM AI.
+          </p>
+        </section>
+      </main>
+    )
+  }
+
   return (
     <main className="ai-page">
       <section className="ai-hero">
@@ -197,6 +276,17 @@ function AI() {
 
         <p>{aiContext.description}</p>
       </section>
+
+      {worldsError && (
+        <section className="ai-debug">
+          <div className="ai-debug-header">
+            <span>WORLD CONTEXT</span>
+            <strong>UNAVAILABLE</strong>
+          </div>
+
+          <pre>{worldsError}</pre>
+        </section>
+      )}
 
       <section className="ai-workspace">
         <div className="ai-context-indicator">

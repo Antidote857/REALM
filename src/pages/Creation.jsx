@@ -1,11 +1,53 @@
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Pencil } from 'lucide-react'
 import { getCreationBySlug } from '../data/creationStore'
-import { getWorldBySlug } from '../data/worldStore'
 
 function Creation() {
   const { slug } = useParams()
   const creation = getCreationBySlug(slug)
+
+  const [world, setWorld] = useState(null)
+  const [worldLoading, setWorldLoading] = useState(true)
+  const [worldError, setWorldError] = useState('')
+
+  useEffect(() => {
+    if (!creation?.worldSlug) {
+      setWorldLoading(false)
+      return
+    }
+
+    async function loadWorld() {
+      try {
+        setWorldLoading(true)
+        setWorldError('')
+
+        const response = await fetch(
+          `http://localhost:3001/api/worlds/${encodeURIComponent(
+            creation.worldSlug
+          )}`,
+          {
+            credentials: 'include',
+          }
+        )
+
+        const result = await response.json()
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to load World.')
+        }
+
+        setWorld(result.world || null)
+      } catch (error) {
+        console.error('Failed to load Creation World:', error)
+        setWorldError(error.message || 'Failed to load World.')
+      } finally {
+        setWorldLoading(false)
+      }
+    }
+
+    loadWorld()
+  }, [creation?.worldSlug])
 
   if (!creation) {
     return (
@@ -22,46 +64,63 @@ function Creation() {
     )
   }
 
-  const world = getWorldBySlug(creation.worldSlug)
+  if (worldLoading) {
+    return (
+      <section className="realm-page">
+        <span className="eyebrow">CREATION</span>
+        <h1>{creation.title}</h1>
+        <p>Loading World context...</p>
+      </section>
+    )
+  }
+
+  const worldName = world?.name || 'World'
 
   return (
     <article className="creation-page">
-     <header className="creation-page-header">
-  <div>
-    <span className="eyebrow">
-      {world?.name || 'WORLD'}
-    </span>
+      <header className="creation-page-header">
+        <div>
+          <span className="eyebrow">
+            {worldName}
+          </span>
 
-    <h1>{creation.title}</h1>
+          <h1>{creation.title}</h1>
 
-    <div className="creation-page-author">
-      <div className="creator-avatar">
-        {creation.creator?.name?.charAt(0) || 'Y'}
-      </div>
+          <div className="creation-page-author">
+            <div className="creator-avatar">
+              {creation.creator?.name?.charAt(0) || 'Y'}
+            </div>
 
-      <div>
-        <strong>
-          {creation.creator?.name || 'You'}
-        </strong>
+            <div>
+              <strong>
+                {creation.creator?.name || 'You'}
+              </strong>
 
-        <span>
-          @{creation.creator?.username || 'you'}
-        </span>
-      </div>
-    </div>
-  </div>
+              <span>
+                @{creation.creator?.username || 'you'}
+              </span>
+            </div>
+          </div>
+        </div>
 
-  <div className="creation-page-actions">
-    <Link
-      to={`/creation/${creation.slug}/edit`}
-      className="creation-edit-button"
-    >
-      <Pencil size={15} strokeWidth={1.8} />
-      <span>Edit Creation</span>
-    </Link>
-  </div>
-
+        <div className="creation-page-actions">
+          <Link
+            to={`/creation/${creation.slug}/edit`}
+            className="creation-edit-button"
+          >
+            <Pencil size={15} strokeWidth={1.8} />
+            <span>Edit Creation</span>
+          </Link>
+        </div>
       </header>
+
+      {worldError && (
+        <div className="creation-page-topics">
+          <span className="creation-page-topic">
+            World context unavailable
+          </span>
+        </div>
+      )}
 
       {/* Topics */}
       {Array.isArray(creation.topics) &&
@@ -127,7 +186,7 @@ function Creation() {
         <Link
           to={`/world/${creation.worldSlug}`}
         >
-          ← Back to {world?.name || 'World'}
+          ← Back to {worldName}
         </Link>
       </div>
     </article>

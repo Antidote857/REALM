@@ -1,15 +1,88 @@
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Plus } from 'lucide-react'
-import { getWorldBySlug } from '../data/worldStore'
 import { getCreationsByWorld } from '../data/creationStore'
 import CreationCard from '../components/CreationCard'
 
 function World() {
   const { slug } = useParams()
 
-  const world = getWorldBySlug(slug)
+  const [world, setWorld] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const worldCreations = getCreationsByWorld(slug)
+  const worldCreations = world
+    ? getCreationsByWorld(slug)
+    : []
+
+  useEffect(() => {
+    let mounted = true
+
+    async function loadWorld() {
+      try {
+        setLoading(true)
+        setError('')
+
+        const response = await fetch(
+          `http://localhost:3001/api/worlds/${encodeURIComponent(slug)}`,
+          {
+            credentials: 'include',
+          }
+        )
+
+        const result = await response.json()
+
+        if (!response.ok) {
+          throw new Error(
+            result.error || 'Failed to load World'
+          )
+        }
+
+        if (mounted) {
+          setWorld(result.world)
+        }
+      } catch (error) {
+        console.error(
+          'Failed to load World:',
+          error
+        )
+
+        if (mounted) {
+          setWorld(null)
+          setError(
+            error.message ||
+              'Failed to load World'
+          )
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    if (slug) {
+      loadWorld()
+    }
+
+    return () => {
+      mounted = false
+    }
+  }, [slug])
+
+  if (loading) {
+    return (
+      <section className="realm-page">
+        <span className="eyebrow">WORLD</span>
+
+        <h1>Loading World...</h1>
+
+        <p>
+          Preparing this World.
+        </p>
+      </section>
+    )
+  }
 
   if (!world) {
     return (
@@ -19,8 +92,8 @@ function World() {
         <h1>World not found.</h1>
 
         <p>
-          The World you're looking for doesn't exist or is no longer
-          available.
+          {error ||
+            "The World you're looking for doesn't exist or is no longer available."}
         </p>
 
         <Link
@@ -47,19 +120,19 @@ function World() {
         </div>
 
         <div className="world-page-actions">
-  <Link
-    to={`/create-creation?world=${world.id}`}
-    className="world-create-button"
-  >
-    <Plus size={15} strokeWidth={1.8} />
-    <span>Create Creation</span>
-  </Link>
+          <Link
+            to={`/create-creation?world=${world.id}`}
+            className="world-create-button"
+          >
+            <Plus size={15} strokeWidth={1.8} />
+            <span>Create Creation</span>
+          </Link>
 
-  <button className="secondary-button">
-    Join World
-  </button>
-</div>
-</div>
+          <button className="secondary-button">
+            Join World
+          </button>
+        </div>
+      </div>
 
       <div className="world-meta">
         <div>
@@ -124,9 +197,9 @@ function World() {
           </h3>
 
           <p>
-  REALM AI understands this World's context and can
-  help you explore its public Creations and knowledge.
-</p>
+            REALM AI understands this World's context and can
+            help you explore its public Creations and knowledge.
+          </p>
 
           <Link
             to={`/ai?context=world&slug=${world.slug}`}

@@ -80,6 +80,41 @@ db.exec(`
       REFERENCES users(id)
       ON DELETE CASCADE
   );
+  CREATE TABLE IF NOT EXISTS creations (
+    id TEXT PRIMARY KEY,
+    world_id TEXT NOT NULL,
+    creator_id TEXT,
+    slug TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    excerpt TEXT NOT NULL DEFAULT '',
+    content TEXT NOT NULL DEFAULT '',
+    likes INTEGER NOT NULL DEFAULT 0,
+    comments INTEGER NOT NULL DEFAULT 0,
+    visibility TEXT NOT NULL DEFAULT 'public',
+    featured INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+
+    FOREIGN KEY (world_id)
+      REFERENCES worlds(id)
+      ON DELETE CASCADE,
+
+    FOREIGN KEY (creator_id)
+      REFERENCES users(id)
+      ON DELETE SET NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS creation_topics (
+    creation_id TEXT NOT NULL,
+    topic TEXT NOT NULL,
+
+    PRIMARY KEY (creation_id, topic),
+
+    FOREIGN KEY (creation_id)
+      REFERENCES creations(id)
+      ON DELETE CASCADE
+  );
+
 `)
 
 const conversationColumns = db

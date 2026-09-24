@@ -1,19 +1,16 @@
+
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Plus } from 'lucide-react'
-import { getCreationsByWorld } from '../data/creationStore'
 import CreationCard from '../components/CreationCard'
 
 function World() {
   const { slug } = useParams()
 
   const [world, setWorld] = useState(null)
+  const [creations, setCreations] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-
-  const worldCreations = world
-    ? getCreationsByWorld(slug)
-    : []
 
   useEffect(() => {
     let mounted = true
@@ -61,8 +58,42 @@ function World() {
       }
     }
 
+    async function loadCreations() {
+      try {
+        const response = await fetch(
+          `http://localhost:3001/api/worlds/${encodeURIComponent(slug)}/creations`,
+          {
+            credentials: 'include',
+          }
+        )
+
+        const result = await response.json()
+
+        if (!response.ok) {
+          throw new Error(
+            result.error ||
+              'Failed to load World Creations'
+          )
+        }
+
+        if (mounted) {
+          setCreations(result.creations || [])
+        }
+      } catch (error) {
+        console.error(
+          'Failed to load World Creations:',
+          error
+        )
+
+        if (mounted) {
+          setCreations([])
+        }
+      }
+    }
+
     if (slug) {
       loadWorld()
+      loadCreations()
     }
 
     return () => {
@@ -144,7 +175,7 @@ function World() {
 
         <div>
           <strong>
-            {worldCreations.length.toLocaleString()}
+            {creations.length.toLocaleString()}
           </strong>
           <span>Creations</span>
         </div>
@@ -224,13 +255,13 @@ function World() {
           </div>
 
           <span className="creation-count">
-            {worldCreations.length} Creations
+            {creations.length} Creations
           </span>
         </div>
 
-        {worldCreations.length > 0 ? (
+        {creations.length > 0 ? (
           <div className="creation-grid">
-            {worldCreations.map((creation) => (
+            {creations.map((creation) => (
               <CreationCard
                 key={creation.id}
                 creation={creation}
@@ -282,3 +313,4 @@ function World() {
 }
 
 export default World
+

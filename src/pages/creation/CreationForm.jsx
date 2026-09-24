@@ -1,5 +1,5 @@
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Globe,
   Lock,
@@ -7,9 +7,6 @@ import {
   Sparkles,
   Upload,
 } from 'lucide-react'
-
-import { getWorlds } from '../../data/worldStore'
-import { saveCreation } from '../../data/creationStore'
 
 const CREATION_TYPES = [
   { value: 'project', label: 'Project' },
@@ -52,7 +49,9 @@ export default function CreationForm({
 }) {
   const isCreate = mode === 'create'
 
-  const availableWorlds = getWorlds()
+  const [availableWorlds, setAvailableWorlds] = useState([])
+  const [worldsLoading, setWorldsLoading] = useState(true)
+  const [worldsError, setWorldsError] = useState('')
 
   const publicWorlds = availableWorlds.filter(
     (world) => world.visibility === 'public'
@@ -71,7 +70,9 @@ export default function CreationForm({
   )
 
   const [description, setDescription] = useState(
-    creation?.description || ''
+    creation?.description ||
+      creation?.excerpt ||
+      ''
   )
 
   const [type, setType] = useState(
@@ -87,12 +88,7 @@ export default function CreationForm({
   )
 
   const [worldId, setWorldId] = useState(
-    creation?.world_id &&
-      publicWorlds.some(
-        (world) => world.id === creation.world_id
-      )
-      ? creation.world_id
-      : defaultWorldId
+    creation?.world_id || initialWorldId || ''
   )
 
   const [topics, setTopics] = useState(
@@ -112,6 +108,64 @@ export default function CreationForm({
   const [error, setError] = useState('')
 
   const fileInputRef = useRef(null)
+
+  useEffect(() => {
+    let mounted = true
+
+    async function loadWorlds() {
+      try {
+        setWorldsLoading(true)
+        setWorldsError('')
+
+        const response = await fetch(
+          'http://localhost:3001/api/worlds',
+          {
+            credentials: 'include',
+          }
+        )
+
+        const result = await response.json()
+
+        if (!response.ok) {
+          throw new Error(
+            result.error || 'Failed to load Worlds.'
+          )
+        }
+
+        if (!mounted) return
+
+        setAvailableWorlds(result.worlds || [])
+      } catch (err) {
+        console.error(
+          'Failed to load Creation Worlds:',
+          err
+        )
+
+        if (!mounted) return
+
+        setWorldsError(
+          err?.message ||
+            'Failed to load Worlds.'
+        )
+      } finally {
+        if (mounted) {
+          setWorldsLoading(false)
+        }
+      }
+    }
+
+    loadWorlds()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!worldId && publicWorlds.length > 0) {
+      setWorldId(defaultWorldId)
+    }
+  }, [worldId, defaultWorldId, publicWorlds.length])
 
   const handleImageUpload = (file) => {
     if (!file) return
@@ -194,6 +248,7 @@ export default function CreationForm({
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'include',
           body: JSON.stringify({
             title: trimmedTitle,
             description: trimmedDescription,
@@ -286,6 +341,13 @@ export default function CreationForm({
       return
     }
 
+    if (isCreate && worldsLoading) {
+      setError(
+        'Please wait for Worlds to finish loading.'
+      )
+      return
+    }
+
     if (isCreate && !worldId) {
       setError(
         'Please choose a World to publish in.'
@@ -307,58 +369,94 @@ export default function CreationForm({
     setLoading(true)
 
     try {
-      const result = {
-        id: creation?.id || crypto.randomUUID(),
+      if (isCreate) {
+        const response = await fetch(
+          'http://localhost:3001/api/creations',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              world_id: selectedWorld.id,
+              title: trimmedTitle,
+              excerpt: trimmedDescription,
+              content: trimmedDescription,
+              topics,
+              visibility,
+            }),
+          }
+        )
 
-        slug:
-          creation?.slug ||
-          trimmedTitle
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-|-$/g, ''),
+        const data = await response.json()
 
-        title: trimmedTitle,
+        if (!response.ok) {
+          throw new Error(
+            data?.error ||
+              'Failed to publish Creation.'
+          )
+        }
 
-        excerpt: trimmedDescription,
+        const createdCreation =
+          data?.creation
 
-        description: trimmedDescription,
+        if (!createdCreation) {
+          throw new Error(
+            'The server did not return the created Creation.'
+          )
+        }
 
-        content: trimmedDescription,
-
-        topics,
-
-        creator:
-          creation?.creator || {
-            name: 'You',
-            username: 'you',
-          },
-
-        likes: creation?.likes || 0,
-
-        comments: creation?.comments || 0,
-
-        createdAt:
-          creation?.createdAt ||
-          new Date().toISOString(),
-
-        type,
-
-        visibility,
-
-        cover_image: coverImage || '',
-
-        world_id:
-          selectedWorld?.id || worldId,
-
-        worldSlug:
-          selectedWorld?.slug ||
-          creation?.worldSlug ||
-          '',
+        onSuccess?.(createdCreation)
+        return
       }
 
-      saveCreation(result)
+      /*
+       * Edit mode still uses the existing local
+       * persistence for now.
+       *
+       * We will migrate Edit Creation separately
+       * to PUT /api/creations/:id.
+       */
+     const response = await fetch(
+  `http://localhost:3001/api/creations/${creation.id}`,
+  {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify({
+      title: trimmedTitle,
+      excerpt: trimmedDescription,
+      content:
+        creation?.content ||
+        trimmedDescription,
+      topics,
+      visibility,
+    }),
+  }
+)
 
-      onSuccess?.(result)
+const data = await response.json()
+
+if (!response.ok) {
+  throw new Error(
+    data?.error ||
+      'Failed to update Creation.'
+  )
+}
+
+const updatedCreation =
+  data?.creation
+
+if (!updatedCreation) {
+  throw new Error(
+    'The server did not return the updated Creation.'
+  )
+}
+
+onSuccess?.(updatedCreation)
     } catch (err) {
       console.error(
         'Failed to publish Creation:',
@@ -375,7 +473,9 @@ export default function CreationForm({
   }
 
   const noWorlds =
-    isCreate && publicWorlds.length === 0
+    isCreate &&
+    !worldsLoading &&
+    publicWorlds.length === 0
 
   return (
     <form
@@ -385,6 +485,12 @@ export default function CreationForm({
       {error && (
         <div className="creation-form-error">
           {error}
+        </div>
+      )}
+
+      {worldsError && (
+        <div className="creation-form-error">
+          {worldsError}
         </div>
       )}
 
@@ -502,9 +608,16 @@ export default function CreationForm({
             onChange={(event) =>
               setWorldId(event.target.value)
             }
-            disabled={noWorlds}
+            disabled={
+              worldsLoading ||
+              noWorlds
+            }
           >
-            {noWorlds ? (
+            {worldsLoading ? (
+              <option value="">
+                Loading Worlds…
+              </option>
+            ) : noWorlds ? (
               <option value="">
                 No Worlds available
               </option>
@@ -773,7 +886,8 @@ export default function CreationForm({
           disabled={
             loading ||
             uploading ||
-            noWorlds
+            noWorlds ||
+            worldsLoading
           }
         >
           {loading ? (
@@ -825,4 +939,3 @@ function VisibilityOption({
     </button>
   )
 }
-

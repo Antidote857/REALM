@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Compass, Globe, Sparkles } from 'lucide-react'
-import { getCreations } from '../data/creationStore'
 import { useAuth } from '../context/AuthContext'
 
 function Profile() {
@@ -9,49 +8,90 @@ function Profile() {
   const [worldsLoading, setWorldsLoading] = useState(true)
   const [worldsError, setWorldsError] = useState('')
 
-  const creations = getCreations()
+  const [creations, setCreations] = useState([])
+  const [creationsLoading, setCreationsLoading] = useState(true)
+  const [creationsError, setCreationsError] = useState('')
+
   const { user, loading } = useAuth()
 
   useEffect(() => {
     if (loading || !user) return
 
-    async function loadWorlds() {
+    let mounted = true
+
+    async function loadProfileData() {
       try {
         setWorldsLoading(true)
+        setCreationsLoading(true)
         setWorldsError('')
+        setCreationsError('')
 
-        const response = await fetch(
-          'http://localhost:3001/api/worlds',
-          {
+        const [worldsResponse, creationsResponse] = await Promise.all([
+          fetch('http://localhost:3001/api/worlds', {
             credentials: 'include',
-          }
-        )
+          }),
 
-        const result = await response.json()
+          fetch('http://localhost:3001/api/creations', {
+            credentials: 'include',
+          }),
+        ])
 
-        if (!response.ok) {
-          throw new Error(result.error || 'Failed to load Worlds.')
+        const worldsResult = await worldsResponse.json()
+        const creationsResult = await creationsResponse.json()
+
+        if (!worldsResponse.ok) {
+          throw new Error(
+            worldsResult.error || 'Failed to load Worlds.'
+          )
         }
 
-        const allWorlds = result.worlds || []
+        if (!creationsResponse.ok) {
+          throw new Error(
+            creationsResult.error || 'Failed to load Creations.'
+          )
+        }
+
+        if (!mounted) return
+
+        const allWorlds = worldsResult.worlds || []
+        const allCreations = creationsResult.creations || []
 
         const userWorlds = allWorlds.filter(
           (world) => world.owner_id === user.id
         )
 
+        const userCreations = allCreations.filter(
+          (creation) => creation.creator_id === user.id
+        )
+
         setWorlds(userWorlds)
+        setCreations(userCreations)
       } catch (error) {
-        console.error('Failed to load profile Worlds:', error)
-        setWorldsError(error.message || 'Failed to load Worlds.')
+        console.error('Failed to load profile data:', error)
+
+        if (!mounted) return
+
+        if (error.message?.includes('Worlds')) {
+          setWorldsError(error.message)
+        } else {
+          setCreationsError(error.message || 'Failed to load Creations.')
+        }
       } finally {
-        setWorldsLoading(false)
+        if (mounted) {
+          setWorldsLoading(false)
+          setCreationsLoading(false)
+        }
       }
     }
 
-    loadWorlds()
+    loadProfileData()
+
+    return () => {
+      mounted = false
+    }
   }, [loading, user])
 
-  if (loading || worldsLoading) {
+  if (loading || worldsLoading || creationsLoading) {
     return (
       <section className="profile-page">
         <p>Loading profile...</p>
@@ -97,7 +137,9 @@ function Profile() {
         </div>
 
         <div className="profile-stat">
-          <strong>{creations.length}</strong>
+          <strong>
+            {creationsError ? '—' : creations.length}
+          </strong>
           <span>Creations</span>
         </div>
 
@@ -113,6 +155,16 @@ function Profile() {
 
           <strong>
             {worldsError}
+          </strong>
+        </section>
+      )}
+
+      {creationsError && (
+        <section className="profile-placeholder">
+          <span>CREATION DATA</span>
+
+          <strong>
+            {creationsError}
           </strong>
         </section>
       )}

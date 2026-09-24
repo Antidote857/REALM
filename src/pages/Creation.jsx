@@ -1,21 +1,78 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Pencil } from 'lucide-react'
-import { getCreationBySlug } from '../data/creationStore'
 
 function Creation() {
   const { slug } = useParams()
-  const creation = getCreationBySlug(slug)
+
+  const [creation, setCreation] = useState(null)
+  const [creationLoading, setCreationLoading] = useState(true)
+  const [creationError, setCreationError] = useState('')
 
   const [world, setWorld] = useState(null)
   const [worldLoading, setWorldLoading] = useState(true)
   const [worldError, setWorldError] = useState('')
 
   useEffect(() => {
-    if (!creation?.worldSlug) {
+    let mounted = true
+
+    async function loadCreation() {
+      try {
+        setCreationLoading(true)
+        setCreationError('')
+
+        const response = await fetch(
+          `http://localhost:3001/api/creations/${encodeURIComponent(slug)}`,
+          {
+            credentials: 'include',
+          }
+        )
+
+        const result = await response.json()
+
+        if (!response.ok) {
+          throw new Error(
+            result.error || 'Failed to load Creation.'
+          )
+        }
+
+        if (!mounted) return
+
+        setCreation(result.creation || null)
+      } catch (error) {
+        console.error('Failed to load Creation:', error)
+
+        if (!mounted) return
+
+        setCreationError(
+          error.message || 'Failed to load Creation.'
+        )
+        setCreation(null)
+      } finally {
+        if (mounted) {
+          setCreationLoading(false)
+        }
+      }
+    }
+
+    if (slug) {
+      loadCreation()
+    } else {
+      setCreationLoading(false)
+    }
+
+    return () => {
+      mounted = false
+    }
+  }, [slug])
+
+  useEffect(() => {
+    if (!creation?.world?.slug) {
       setWorldLoading(false)
       return
     }
+
+    let mounted = true
 
     async function loadWorld() {
       try {
@@ -24,7 +81,7 @@ function Creation() {
 
         const response = await fetch(
           `http://localhost:3001/api/worlds/${encodeURIComponent(
-            creation.worldSlug
+            creation.world.slug
           )}`,
           {
             credentials: 'include',
@@ -34,28 +91,54 @@ function Creation() {
         const result = await response.json()
 
         if (!response.ok) {
-          throw new Error(result.error || 'Failed to load World.')
+          throw new Error(
+            result.error || 'Failed to load World.'
+          )
         }
+
+        if (!mounted) return
 
         setWorld(result.world || null)
       } catch (error) {
         console.error('Failed to load Creation World:', error)
-        setWorldError(error.message || 'Failed to load World.')
+
+        if (!mounted) return
+
+        setWorldError(
+          error.message || 'Failed to load World.'
+        )
       } finally {
-        setWorldLoading(false)
+        if (mounted) {
+          setWorldLoading(false)
+        }
       }
     }
 
     loadWorld()
-  }, [creation?.worldSlug])
 
-  if (!creation) {
+    return () => {
+      mounted = false
+    }
+  }, [creation?.world?.slug])
+
+  if (creationLoading) {
+    return (
+      <section className="realm-page">
+        <span className="eyebrow">CREATION</span>
+        <h1>Loading Creation...</h1>
+        <p>Loading Creation content...</p>
+      </section>
+    )
+  }
+
+  if (creationError || !creation) {
     return (
       <section className="realm-page">
         <span className="eyebrow">404</span>
         <h1>Creation not found.</h1>
         <p>
-          The Creation you're looking for doesn't exist or is no longer available.
+          {creationError ||
+            "The Creation you're looking for doesn't exist or is no longer available."}
         </p>
         <Link to="/worlds" className="primary-button">
           Back to Worlds
@@ -74,7 +157,16 @@ function Creation() {
     )
   }
 
-  const worldName = world?.name || 'World'
+const worldName =
+  world?.name ||
+  creation.world?.name ||
+  'World'
+
+const worldSlug =
+  world?.slug ||
+  creation.world?.slug ||
+  creation.worldSlug ||
+  ''
 
   return (
     <article className="creation-page">
@@ -184,7 +276,7 @@ function Creation() {
 
       <div className="creation-back">
         <Link
-          to={`/world/${creation.worldSlug}`}
+          to={`/world/${worldSlug}`}
         >
           ← Back to {worldName}
         </Link>

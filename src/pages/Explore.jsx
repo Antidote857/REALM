@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react'
 import { Sparkles } from 'lucide-react'
 import {
@@ -13,7 +14,6 @@ import {
   sortCreationsByMode,
   sortWorldsByMode,
 } from '../utils/discovery'
-import { getCreations } from '../data/creationStore'
 import CreationCard from '../components/CreationCard'
 import WorldCard from '../components/WorldCard'
 
@@ -52,10 +52,19 @@ function Explore() {
   const [allWorlds, setAllWorlds] =
     useState([])
 
+  const [allCreations, setAllCreations] =
+    useState([])
+
   const [worldsLoading, setWorldsLoading] =
     useState(true)
 
+  const [creationsLoading, setCreationsLoading] =
+    useState(true)
+
   const [worldsError, setWorldsError] =
+    useState('')
+
+  const [creationsError, setCreationsError] =
     useState('')
 
   useEffect(() => {
@@ -107,14 +116,59 @@ function Explore() {
       }
     }
 
+    async function loadCreations() {
+      try {
+        setCreationsLoading(true)
+        setCreationsError('')
+
+        const response = await fetch(
+          'http://localhost:3001/api/creations',
+          {
+            credentials: 'include',
+          }
+        )
+
+        const result = await response.json()
+
+        if (!response.ok) {
+          throw new Error(
+            result.error ||
+              'Failed to load Creations'
+          )
+        }
+
+        if (mounted) {
+          setAllCreations(
+            result.creations || []
+          )
+        }
+      } catch (error) {
+        console.error(
+          'Failed to load Creations for Explore:',
+          error
+        )
+
+        if (mounted) {
+          setAllCreations([])
+          setCreationsError(
+            error.message ||
+              'Failed to load Creations'
+          )
+        }
+      } finally {
+        if (mounted) {
+          setCreationsLoading(false)
+        }
+      }
+    }
+
     loadWorlds()
+    loadCreations()
 
     return () => {
       mounted = false
     }
   }, [])
-
-  const allCreations = getCreations()
 
   const worldCategories =
     getWorldCategories(allWorlds)
@@ -402,7 +456,15 @@ function Explore() {
           </span>
         </div>
 
-        {displayedCreations.length > 0 ? (
+        {creationsLoading ? (
+          <div className="empty-state">
+            <p>Loading Creations...</p>
+          </div>
+        ) : creationsError ? (
+          <div className="empty-state">
+            <p>{creationsError}</p>
+          </div>
+        ) : displayedCreations.length > 0 ? (
           <div className="creations-grid">
             {displayedCreations.map(
               (creation) => (
@@ -426,3 +488,4 @@ function Explore() {
 }
 
 export default Explore
+

@@ -201,7 +201,11 @@ app.get('/api/worlds', (req, res) => {
             WHERE world_members.world_id = worlds.id
           ) AS members,
 
-          0 AS creations
+          (
+  SELECT COUNT(*)
+  FROM creations
+  WHERE creations.world_id = worlds.id
+) AS creations
 
         FROM worlds
 
@@ -254,7 +258,11 @@ app.get('/api/worlds/:slug', (req, res) => {
             WHERE world_members.world_id = worlds.id
           ) AS members,
 
-          0 AS creations
+          (
+  SELECT COUNT(*)
+  FROM creations
+  WHERE creations.world_id = worlds.id
+) AS creations
 
         FROM worlds
 
@@ -447,7 +455,11 @@ app.post('/api/worlds', (req, res) => {
             WHERE world_members.world_id = worlds.id
           ) AS members,
 
-          0 AS creations
+          (
+  SELECT COUNT(*)
+  FROM creations
+  WHERE creations.world_id = worlds.id
+) AS creations
 
         FROM worlds
 
@@ -536,6 +548,768 @@ app.post('/api/worlds/:id/join', (req, res) => {
   }
 })
 
+// ============================================================
+// REALM CREATIONS API
+// ============================================================
+
+// Format a database Creation for the frontend
+function formatCreation(creation) {
+  if (!creation) {
+    return null
+  }
+
+  return {
+    id: creation.id,
+    slug: creation.slug,
+    worldSlug: creation.world_slug,
+    worldId: creation.world_id,
+    title: creation.title,
+    excerpt: creation.excerpt,
+    content: creation.content,
+    topics: creation.topics || [],
+    creator: creation.creator_id
+      ? {
+          id: creation.creator_id,
+          name: creation.creator_display_name,
+          username: creation.creator_username,
+        }
+      : {
+          name: creation.creator_name || 'REALM',
+          username: creation.creator_username || 'realm',
+        },
+    likes: creation.likes,
+    comments: creation.comments,
+    createdAt: creation.created_at,
+    updatedAt: creation.updated_at,
+    visibility: creation.visibility,
+    featured: Boolean(creation.featured),
+  }
+}
+
+// Get all public Creations
+app.get('/api/creations', (req, res) => {
+  try {
+    const creations = db
+      .prepare(`
+        SELECT
+          creations.id,
+          creations.world_id,
+          worlds.slug AS world_slug,
+          creations.creator_id,
+          users.display_name AS creator_display_name,
+          users.username AS creator_username,
+          creations.slug,
+          creations.title,
+          creations.excerpt,
+          creations.content,
+          creations.likes,
+          creations.comments,
+          creations.visibility,
+          creations.featured,
+          creations.created_at,
+          creations.updated_at
+        FROM creations
+        JOIN worlds
+          ON worlds.id = creations.world_id
+        LEFT JOIN users
+          ON users.id = creations.creator_id
+        WHERE creations.visibility = 'public'
+          AND worlds.visibility = 'public'
+        ORDER BY creations.created_at DESC
+      `)
+      .all()
+
+    const topicStatement = db.prepare(`
+      SELECT topic
+      FROM creation_topics
+      WHERE creation_id = ?
+      ORDER BY topic ASC
+    `)
+
+    const formattedCreations = creations.map(
+      (creation) =>
+        formatCreation({
+          ...creation,
+          topics: topicStatement
+            .all(creation.id)
+            .map((item) => item.topic),
+        })
+    )
+
+    return res.json({
+      creations: formattedCreations,
+    })
+  } catch (error) {
+    console.error(
+      'Failed to retrieve Creations:',
+      error
+    )
+
+    return res.status(500).json({
+      error: 'Failed to retrieve Creations',
+    })
+  }
+})
+
+// Get a single Creation by slug
+app.get('/api/creations/:slug', (req, res) => {
+  try {
+    const { slug } = req.params
+    const user = getAuthenticatedUser(req)
+
+    const creation = db
+      .prepare(`
+        SELECT
+          creations.id,
+          creations.world_id,
+          worlds.slug AS world_slug,
+          worlds.visibility AS world_visibility,
+          creations.creator_id,
+          users.display_name AS creator_display_name,
+          users.username AS creator_username,
+          creations.slug,
+          creations.title,
+          creations.excerpt,
+          creations.content,
+          creations.likes,
+          creations.comments,
+          creations.visibility,
+          creations.featured,
+          creations.created_at,
+          creations.updated_at
+        FROM creations
+        JOIN worlds
+          ON worlds.id = creations.world_id
+        LEFT JOIN users
+          ON users.id = creations.creator_id
+        WHERE creations.slug = ?
+        AND (
+          creations.visibility = 'public'
+          OR creations.creator_id = ?
+        )
+      `)
+      .get(
+        slug,
+        user?.id || ''
+      )
+
+    if (!creation) {
+      return res.status(404).json({
+        error: 'Creation not found',
+      })
+    }
+
+    const topics = db
+      .prepare(`
+        SELECT topic
+        FROM creation_topics
+        WHERE creation_id = ?
+        ORDER BY topic ASC
+      `)
+      .all(creation.id)
+      .map((item) => item.topic)
+
+    return res.json({
+      creation: formatCreation({
+        ...creation,
+        topics,
+      }),
+    })
+  } catch (error) {
+    console.error(
+      'Failed to retrieve Creation:',
+      error
+    )
+
+    return res.status(500).json({
+      error: 'Failed to retrieve Creation',
+    })
+  }
+})
+
+// Get all public Creations belonging to a World
+app.get('/api/worlds/:slug/creations', (req, res) => {
+  try {
+    const { slug } = req.params
+    const user = getAuthenticatedUser(req)
+
+    const world = db
+      .prepare(`
+        SELECT
+          id,
+          slug,
+          visibility,
+          owner_id
+        FROM worlds
+        WHERE slug = ?
+      `)
+      .get(slug)
+
+    if (!world) {
+      return res.status(404).json({
+        error: 'World not found',
+      })
+    }
+
+    if (
+      world.visibility !== 'public' &&
+      world.owner_id !== user?.id
+    ) {
+      return res.status(403).json({
+        error: 'This World is private',
+      })
+    }
+
+    const creations = db
+      .prepare(`
+        SELECT
+          creations.id,
+          creations.world_id,
+          worlds.slug AS world_slug,
+          creations.creator_id,
+          users.display_name AS creator_display_name,
+          users.username AS creator_username,
+          creations.slug,
+          creations.title,
+          creations.excerpt,
+          creations.content,
+          creations.likes,
+          creations.comments,
+          creations.visibility,
+          creations.featured,
+          creations.created_at,
+          creations.updated_at
+        FROM creations
+        JOIN worlds
+          ON worlds.id = creations.world_id
+        LEFT JOIN users
+          ON users.id = creations.creator_id
+        WHERE worlds.slug = ?
+          AND (
+            creations.visibility = 'public'
+            OR creations.creator_id = ?
+          )
+        ORDER BY creations.created_at DESC
+      `)
+      .all(
+        slug,
+        user?.id || ''
+      )
+
+    const topicStatement = db.prepare(`
+      SELECT topic
+      FROM creation_topics
+      WHERE creation_id = ?
+      ORDER BY topic ASC
+    `)
+
+    const formattedCreations = creations.map(
+      (creation) =>
+        formatCreation({
+          ...creation,
+          topics: topicStatement
+            .all(creation.id)
+            .map((item) => item.topic),
+        })
+    )
+
+    return res.json({
+      creations: formattedCreations,
+    })
+  } catch (error) {
+    console.error(
+      'Failed to retrieve World Creations:',
+      error
+    )
+
+    return res.status(500).json({
+      error: 'Failed to retrieve World Creations',
+    })
+  }
+})
+
+
+// Create a new Creation
+app.post('/api/creations', (req, res) => {
+  try {
+    const user = getAuthenticatedUser(req)
+
+    if (!user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+      })
+    }
+
+    const {
+      world_id,
+      title,
+      excerpt = '',
+      content = '',
+      topics = [],
+      visibility = 'public',
+    } = req.body
+
+    const trimmedTitle =
+      String(title || '').trim()
+
+    const trimmedExcerpt =
+      String(excerpt || '').trim()
+
+    const trimmedContent =
+      String(content || '').trim()
+
+    if (
+      trimmedTitle.length < 3 ||
+      trimmedTitle.length > 120
+    ) {
+      return res.status(400).json({
+        error:
+          'Creation title must be between 3 and 120 characters',
+      })
+    }
+
+    if (trimmedExcerpt.length > 500) {
+      return res.status(400).json({
+        error:
+          'Creation excerpt must be 500 characters or fewer',
+      })
+    }
+
+    if (!['public', 'private'].includes(visibility)) {
+      return res.status(400).json({
+        error:
+          'Creation visibility must be public or private',
+      })
+    }
+
+    if (!Array.isArray(topics)) {
+      return res.status(400).json({
+        error: 'Creation topics must be an array',
+      })
+    }
+
+    const world = db
+      .prepare(`
+        SELECT
+          id,
+          slug,
+          visibility
+        FROM worlds
+        WHERE id = ?
+      `)
+      .get(world_id)
+
+    if (!world) {
+      return res.status(404).json({
+        error: 'World not found',
+      })
+    }
+
+    if (
+      world.visibility !== 'public' &&
+      visibility === 'public'
+    ) {
+      return res.status(400).json({
+        error:
+          'A Creation in a private World cannot be public.',
+      })
+    }
+
+    const baseSlug =
+      trimmedTitle
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 50)
+
+    if (baseSlug.length < 3) {
+      return res.status(400).json({
+        error:
+          'Creation title must produce a valid slug',
+      })
+    }
+
+    let slug = baseSlug
+    let suffix = 2
+
+    while (
+      db
+        .prepare(
+          'SELECT id FROM creations WHERE slug = ?'
+        )
+        .get(slug)
+    ) {
+      const suffixText = `-${suffix}`
+
+      slug =
+        `${baseSlug.slice(
+          0,
+          50 - suffixText.length
+        )}${suffixText}`
+
+      suffix += 1
+    }
+
+    const creationId =
+      crypto.randomUUID()
+
+    const now =
+      new Date().toISOString()
+
+    const normalizedTopics = [
+      ...new Set(
+        topics
+          .map((topic) =>
+            String(topic).trim()
+          )
+          .filter(Boolean)
+      ),
+    ]
+
+    const createCreation =
+      db.transaction(() => {
+        db.prepare(`
+          INSERT INTO creations (
+            id,
+            world_id,
+            creator_id,
+            slug,
+            title,
+            excerpt,
+            content,
+            likes,
+            comments,
+            visibility,
+            featured,
+            created_at,
+            updated_at
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          creationId,
+          world.id,
+          user.id,
+          slug,
+          trimmedTitle,
+          trimmedExcerpt,
+          trimmedContent,
+          0,
+          0,
+          visibility,
+          0,
+          now,
+          now
+        )
+
+        const insertTopic =
+          db.prepare(`
+            INSERT INTO creation_topics (
+              creation_id,
+              topic
+            )
+            VALUES (?, ?)
+          `)
+
+        for (const topic of normalizedTopics) {
+          insertTopic.run(
+            creationId,
+            topic
+          )
+        }
+      })
+
+    createCreation()
+
+    const creation = db
+      .prepare(`
+        SELECT
+          creations.id,
+          creations.world_id,
+          worlds.slug AS world_slug,
+          creations.creator_id,
+          users.display_name AS creator_display_name,
+          users.username AS creator_username,
+          creations.slug,
+          creations.title,
+          creations.excerpt,
+          creations.content,
+          creations.likes,
+          creations.comments,
+          creations.visibility,
+          creations.featured,
+          creations.created_at,
+          creations.updated_at
+        FROM creations
+        JOIN worlds
+          ON worlds.id = creations.world_id
+        LEFT JOIN users
+          ON users.id = creations.creator_id
+        WHERE creations.id = ?
+      `)
+      .get(creationId)
+
+    return res.status(201).json({
+      creation: formatCreation({
+        ...creation,
+        topics: normalizedTopics,
+      }),
+    })
+  } catch (error) {
+    console.error(
+      'Failed to create Creation:',
+      error
+    )
+
+    return res.status(500).json({
+      error: 'Failed to create Creation',
+    })
+  }
+})
+
+
+
+// Update an existing Creation
+app.put('/api/creations/:id', (req, res) => {
+  try {
+    const user = getAuthenticatedUser(req)
+
+    if (!user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+      })
+    }
+
+    const { id } = req.params
+
+    const existingCreation = db
+      .prepare(`
+        SELECT
+          id,
+          world_id,
+          creator_id
+        FROM creations
+        WHERE id = ?
+      `)
+      .get(id)
+
+    if (!existingCreation) {
+      return res.status(404).json({
+        error: 'Creation not found',
+      })
+    }
+
+    if (existingCreation.creator_id !== user.id) {
+      return res.status(403).json({
+        error:
+          'You can only edit your own Creations',
+      })
+    }
+
+    const {
+      title,
+      excerpt = '',
+      content = '',
+      topics = [],
+      visibility = 'public',
+    } = req.body
+
+    const trimmedTitle =
+      String(title || '').trim()
+
+    const trimmedExcerpt =
+      String(excerpt || '').trim()
+
+    const trimmedContent =
+      String(content || '').trim()
+
+    if (
+      trimmedTitle.length < 3 ||
+      trimmedTitle.length > 120
+    ) {
+      return res.status(400).json({
+        error:
+          'Creation title must be between 3 and 120 characters',
+      })
+    }
+
+    if (trimmedExcerpt.length > 500) {
+      return res.status(400).json({
+        error:
+          'Creation excerpt must be 500 characters or fewer',
+      })
+    }
+
+    if (!['public', 'private'].includes(visibility)) {
+      return res.status(400).json({
+        error:
+          'Creation visibility must be public or private',
+      })
+    }
+
+    if (!Array.isArray(topics)) {
+      return res.status(400).json({
+        error: 'Creation topics must be an array',
+      })
+    }
+
+    const normalizedTopics = [
+      ...new Set(
+        topics
+          .map((topic) =>
+            String(topic).trim()
+          )
+          .filter(Boolean)
+      ),
+    ]
+
+    const now =
+      new Date().toISOString()
+
+    const updateCreation =
+      db.transaction(() => {
+        db.prepare(`
+          UPDATE creations
+          SET
+            title = ?,
+            excerpt = ?,
+            content = ?,
+            visibility = ?,
+            updated_at = ?
+          WHERE id = ?
+        `).run(
+          trimmedTitle,
+          trimmedExcerpt,
+          trimmedContent,
+          visibility,
+          now,
+          id
+        )
+
+        db.prepare(`
+          DELETE FROM creation_topics
+          WHERE creation_id = ?
+        `).run(id)
+
+        const insertTopic =
+          db.prepare(`
+            INSERT INTO creation_topics (
+              creation_id,
+              topic
+            )
+            VALUES (?, ?)
+          `)
+
+        for (const topic of normalizedTopics) {
+          insertTopic.run(
+            id,
+            topic
+          )
+        }
+      })
+
+    updateCreation()
+
+    const creation = db
+      .prepare(`
+        SELECT
+          creations.id,
+          creations.world_id,
+          worlds.slug AS world_slug,
+          creations.creator_id,
+          users.display_name AS creator_display_name,
+          users.username AS creator_username,
+          creations.slug,
+          creations.title,
+          creations.excerpt,
+          creations.content,
+          creations.likes,
+          creations.comments,
+          creations.visibility,
+          creations.featured,
+          creations.created_at,
+          creations.updated_at
+        FROM creations
+        JOIN worlds
+          ON worlds.id = creations.world_id
+        LEFT JOIN users
+          ON users.id = creations.creator_id
+        WHERE creations.id = ?
+      `)
+      .get(id)
+
+    return res.json({
+      creation: formatCreation({
+        ...creation,
+        topics: normalizedTopics,
+      }),
+    })
+  } catch (error) {
+    console.error(
+      'Failed to update Creation:',
+      error
+    )
+
+    return res.status(500).json({
+      error: 'Failed to update Creation',
+    })
+  }
+})
+
+// Delete an existing Creation
+app.delete('/api/creations/:id', (req, res) => {
+  try {
+    const user = getAuthenticatedUser(req)
+
+    if (!user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+      })
+    }
+
+    const { id } = req.params
+
+    const creation = db
+      .prepare(`
+        SELECT
+          id,
+          creator_id
+        FROM creations
+        WHERE id = ?
+      `)
+      .get(id)
+
+    if (!creation) {
+      return res.status(404).json({
+        error: 'Creation not found',
+      })
+    }
+
+    if (creation.creator_id !== user.id) {
+      return res.status(403).json({
+        error:
+          'You can only delete your own Creations',
+      })
+    }
+
+    db.prepare(`
+      DELETE FROM creations
+      WHERE id = ?
+    `).run(id)
+
+    return res.json({
+      success: true,
+    })
+  } catch (error) {
+    console.error(
+      'Failed to delete Creation:',
+      error
+    )
+
+    return res.status(500).json({
+      error: 'Failed to delete Creation',
+    })
+  }
+})
 
 // World AI Assist endpoint
 app.post(

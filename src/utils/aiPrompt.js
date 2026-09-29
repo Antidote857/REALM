@@ -161,7 +161,28 @@ ${creationContext}
 function buildCreationContext(data) {
   if (!data?.creation) return ''
 
-  const { creation, world } = data
+  const {
+    creation,
+    world,
+    relatedCreations = [],
+  } = data
+
+  const relatedCreationContext = relatedCreations.length
+  ? relatedCreations
+      .map(
+        (relatedCreation) => `
+  - ${relatedCreation.title}
+    Creator: ${formatCreator(relatedCreation)}
+    Topics: ${
+      relatedCreation.topics?.length
+        ? relatedCreation.topics.join(', ')
+        : 'None'
+    }
+  Summary: ${relatedCreation.excerpt}
+`
+      )
+      .join('')
+  : 'No other public Creations are currently available in this World.'
 
   return `
 ACTIVE CREATION:
@@ -188,6 +209,9 @@ PARENT WORLD:
 Name: ${world?.name || getCreationWorldName(creation)}
 Category: ${world?.category || 'Unknown'}
 Description: ${world?.description || 'Unavailable'}
+
+OTHER PUBLIC CREATIONS IN THIS WORLD:
+${relatedCreationContext}
 `
 }
 

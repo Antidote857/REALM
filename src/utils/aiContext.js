@@ -48,6 +48,12 @@ export function getAIContext(
       (item) => item.slug === slug
     )
 
+    const relatedCreations = publicCreations.filter(
+      (item) =>
+        item.worldSlug === creation.worldSlug &&
+        String(item.id) !== String(creation.id)
+    )
+
     if (!world || world.visibility !== 'public') {
       return {
         type: 'global',
@@ -110,6 +116,12 @@ export function getAIContext(
       ) ||
       null
 
+      const relatedCreations = publicCreations.filter(
+  (item) =>
+    item.worldSlug === creation.worldSlug &&
+    String(item.id) !== String(creation.id)
+)
+
     return {
       type: 'creation',
       label: 'CREATION',
@@ -119,6 +131,7 @@ export function getAIContext(
       data: {
         creation,
         world,
+        relatedCreations,
       },
     }
   }

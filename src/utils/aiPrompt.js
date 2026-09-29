@@ -108,16 +108,16 @@ function buildWorldContext(data) {
   if (!data?.world) return ''
 
   const {
-  world,
-  creations = [],
-  currentUser,
-  userRelationship = 'none',
-} = data
+    world,
+    creations = [],
+    currentUser,
+    userRelationship = 'none',
+  } = data
 
-const creationContext = creations.length
-  ? creations
-      .map(
-        (creation) => `
+  const creationContext = creations.length
+    ? creations
+        .map(
+          (creation) => `
 - ${creation.title}
   Creator: ${formatCreator(creation)}
   Topics: ${
@@ -133,9 +133,9 @@ const creationContext = creations.length
   Created: ${creation.createdAt}
   Updated: ${creation.updatedAt}
 `
-      )
-      .join('')
-  : 'No public Creations are currently available.'
+        )
+        .join('')
+    : 'No public Creations are currently available.'
 
   return `
 ACTIVE WORLD:
@@ -168,21 +168,21 @@ function buildCreationContext(data) {
   } = data
 
   const relatedCreationContext = relatedCreations.length
-  ? relatedCreations
-      .map(
-        (relatedCreation) => `
-  - ${relatedCreation.title}
-    Creator: ${formatCreator(relatedCreation)}
-    Topics: ${
-      relatedCreation.topics?.length
-        ? relatedCreation.topics.join(', ')
-        : 'None'
-    }
+    ? relatedCreations
+        .map(
+          (relatedCreation) => `
+- ${relatedCreation.title}
+  Creator: ${formatCreator(relatedCreation)}
+  Topics: ${
+    relatedCreation.topics?.length
+      ? relatedCreation.topics.join(', ')
+      : 'None'
+  }
   Summary: ${relatedCreation.excerpt}
 `
-      )
-      .join('')
-  : 'No other public Creations are currently available in this World.'
+        )
+        .join('')
+    : 'No other public Creations are currently available in this World.'
 
   return `
 ACTIVE CREATION:
@@ -305,6 +305,38 @@ currently available in this World.
 `
   }
 
+  if (aiContext.type === 'creation') {
+    return `
+CREATION-SPECIFIC AI INSTRUCTIONS:
+
+You are the AI intelligence layer for the active Creation.
+
+Treat the active Creation as your primary knowledge object.
+
+Prioritize the Creation's content, excerpt, topics, creator, metadata,
+and relationship to its parent World when answering questions.
+
+Reason deeply about the ideas, knowledge, purpose, and themes contained
+in the active Creation.
+
+Use other public Creations in the parent World only when they provide
+useful comparison or surrounding context.
+
+Do not attribute information from another Creation to the active
+Creation.
+
+Clearly distinguish the active Creation's knowledge from related
+knowledge found in other Creations.
+
+Keep answers focused on the active Creation unless the user clearly asks
+for broader World or general knowledge.
+
+If the supplied context does not contain enough information to answer a
+Creation-specific question, clearly say that the information is not
+available in this Creation.
+`
+  }
+
   return ''
 }
 
@@ -324,7 +356,7 @@ export function buildREALMPrompt(
   let contextualInformation = ''
 
   const contextInstructions =
-  buildContextInstructions(aiContext)
+    buildContextInstructions(aiContext)
 
   if (aiContext.type === 'global') {
     contextualInformation = buildGlobalContext(

@@ -169,11 +169,25 @@ ACTIVE CREATION:
 Title: ${creation.title}
 Creator: ${formatCreator(creation)}
 World: ${world?.name || getCreationWorldName(creation)}
+Topics: ${
+    creation.topics?.length
+      ? creation.topics.join(', ')
+      : 'None'
+  }
 Excerpt: ${creation.excerpt}
 Content: ${creation.content}
 Likes: ${creation.likes}
 Comments: ${creation.comments}
+Featured: ${creation.featured ? 'Yes' : 'No'}
 Visibility: ${creation.visibility}
+Created: ${creation.createdAt}
+Updated: ${creation.updatedAt}
+
+PARENT WORLD:
+
+Name: ${world?.name || getCreationWorldName(creation)}
+Category: ${world?.category || 'Unknown'}
+Description: ${world?.description || 'Unavailable'}
 `
 }
 

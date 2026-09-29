@@ -1399,9 +1399,6 @@ Return exactly this structure:
 
       for (const model of MODELS) {
         try {
-          console.log(
-            `Trying Gemini model for World AI Assist: ${model}`
-          )
 
           const response =
             await ai.models.generateContent({
@@ -1416,9 +1413,7 @@ Return exactly this structure:
               },
             })
 
-          console.log(
-            `World AI Assist response received from: ${model}`
-          )
+      
 
           let suggestions
 
@@ -2061,9 +2056,7 @@ ${message}`
 
   for (const model of MODELS) {
     try {
-      console.log(
-        `Trying Gemini model: ${model}`
-      )
+      
 
       const response =
         await ai.models.generateContent({
@@ -2074,9 +2067,7 @@ ${message}`
           },
         })
 
-      console.log(
-        `Gemini response received from: ${model}`
-      )
+      
 
       return response.text
     } catch (error) {
@@ -2274,9 +2265,7 @@ Return exactly this structure:
 
       for (const model of MODELS) {
         try {
-          console.log(
-            `Trying Gemini model for Creation AI Assist: ${model}`
-          )
+          
 
           const response =
             await ai.models.generateContent({
@@ -2291,9 +2280,7 @@ Return exactly this structure:
               },
             })
 
-          console.log(
-            `Creation AI Assist response received from: ${model}`
-          )
+          
 
           let suggestions
 

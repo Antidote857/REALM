@@ -8,6 +8,7 @@ function AI() {
 
   const [worlds, setWorlds] = useState([])
   const [creations, setCreations] = useState([])
+  const [currentUser, setCurrentUser] = useState(null)
   const [worldsLoading, setWorldsLoading] = useState(true)
   const [worldsError, setWorldsError] = useState('')
 
@@ -26,27 +27,40 @@ function AI() {
     setWorldsLoading(true)
     setWorldsError('')
 
-    const [worldsResponse, creationsResponse] =
-      await Promise.all([
-        fetch(
-          'http://localhost:3001/api/worlds',
-          {
-            credentials: 'include',
-          }
-        ),
-        fetch(
-          'http://localhost:3001/api/creations',
-          {
-            credentials: 'include',
-          }
-        ),
-      ])
+    const [
+  worldsResponse,
+  creationsResponse,
+  userResponse,
+] = await Promise.all([
+  fetch(
+    'http://localhost:3001/api/worlds',
+    {
+      credentials: 'include',
+    }
+  ),
+  fetch(
+    'http://localhost:3001/api/creations',
+    {
+      credentials: 'include',
+    }
+  ),
+  fetch(
+    'http://localhost:3001/api/auth/me',
+    {
+      credentials: 'include',
+    }
+  ),
+])
 
     const worldsResult =
       await worldsResponse.json()
 
     const creationsResult =
       await creationsResponse.json()
+
+    const userResult = userResponse.ok
+      ? await userResponse.json()
+      : null
 
     if (!worldsResponse.ok) {
       throw new Error(
@@ -70,6 +84,8 @@ function AI() {
       setCreations(
         creationsResult.creations || []
       )
+
+      setCurrentUser(userResult?.user || null)
     }
   } catch (error) {
     console.error(
@@ -101,16 +117,18 @@ function AI() {
   }, [])
 
   const aiContext = getAIContext(
-  searchParams,
-  worlds,
-  creations
-)
+    searchParams,
+    worlds,
+    creations,
+    currentUser
+  )
 
-const realmPrompt = buildREALMPrompt(
-  searchParams,
-  worlds,
-  creations
-)
+  const realmPrompt = buildREALMPrompt(
+    searchParams,
+    worlds,
+    creations,
+    currentUser
+  )
 
   useEffect(() => {
     let isActive = true

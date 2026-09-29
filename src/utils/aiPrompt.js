@@ -107,21 +107,35 @@ ${creationContext}
 function buildWorldContext(data) {
   if (!data?.world) return ''
 
-  const { world, creations = [] } = data
+  const {
+  world,
+  creations = [],
+  currentUser,
+  userRelationship = 'none',
+} = data
 
-  const creationContext = creations.length
-    ? creations
-        .map(
-          (creation) => `
+const creationContext = creations.length
+  ? creations
+      .map(
+        (creation) => `
 - ${creation.title}
   Creator: ${formatCreator(creation)}
+  Topics: ${
+    creation.topics?.length
+      ? creation.topics.join(', ')
+      : 'None'
+  }
+  Summary: ${creation.excerpt}
+  Content: ${creation.content}
   Likes: ${creation.likes}
   Comments: ${creation.comments}
-  Summary: ${creation.excerpt}
+  Featured: ${creation.featured ? 'Yes' : 'No'}
+  Created: ${creation.createdAt}
+  Updated: ${creation.updatedAt}
 `
-        )
-        .join('')
-    : 'No public Creations are currently available.'
+      )
+      .join('')
+  : 'No public Creations are currently available.'
 
   return `
 ACTIVE WORLD:
@@ -132,6 +146,12 @@ Description: ${world.description}
 Members: ${world.members}
 Creations: ${world.creations}
 Visibility: ${world.visibility}
+
+CURRENT USER:
+
+Name: ${currentUser?.displayName || currentUser?.username || 'Unknown'}
+Username: ${currentUser?.username || 'Unknown'}
+Relationship to World: ${userRelationship}
 
 PUBLIC CREATIONS IN THIS WORLD:
 ${creationContext}
@@ -220,12 +240,14 @@ REALM discovery ranking as the primary ordering signal.
 export function buildREALMPrompt(
   searchParams,
   worlds = [],
-  creations = []
+  creations = [],
+  currentUser = null
 ) {
   const aiContext = getAIContext(
     searchParams,
     worlds,
-    creations
+    creations,
+    currentUser
   )
 
   let contextualInformation = ''

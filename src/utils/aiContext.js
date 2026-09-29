@@ -22,7 +22,8 @@ function buildGlobalContext(worlds, creations) {
 export function getAIContext(
   searchParams,
   worlds = [],
-  creations = []
+  creations = [],
+  currentUser = null
 ) {
   const context = searchParams.get('context')
   const slug = searchParams.get('slug')
@@ -72,6 +73,11 @@ export function getAIContext(
       data: {
         world,
         creations: worldCreations,
+        currentUser,
+        userRelationship:
+        currentUser?.id === world.owner_id
+          ? 'owner'
+          : 'none',
       },
     }
   }

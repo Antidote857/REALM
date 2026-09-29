@@ -34,6 +34,29 @@ REALM AI GOVERNANCE RULES:
    Creation and its parent World.
 `
 
+function formatCreator(creation) {
+  if (!creation?.creator) {
+    return 'Unknown'
+  }
+
+  const name =
+    creation.creator.name ||
+    creation.creator.username ||
+    'Unknown'
+
+  const username = creation.creator.username
+
+  if (username) {
+    return `${name} (@${username})`
+  }
+
+  return name
+}
+
+function getCreationWorldName(creation) {
+  return creation?.worldSlug || 'Unknown'
+}
+
 function buildGlobalContext(data) {
   if (!data) return ''
 
@@ -60,8 +83,8 @@ function buildGlobalContext(data) {
         .map(
           (creation) => `
 - ${creation.title}
-  Creator: ${creation.creator.name} (@${creation.creator.username})
-  World: ${creation.worldSlug}
+  Creator: ${formatCreator(creation)}
+  World: ${getCreationWorldName(creation)}
   Likes: ${creation.likes}
   Comments: ${creation.comments}
   Summary: ${creation.excerpt}
@@ -91,7 +114,7 @@ function buildWorldContext(data) {
         .map(
           (creation) => `
 - ${creation.title}
-  Creator: ${creation.creator.name} (@${creation.creator.username})
+  Creator: ${formatCreator(creation)}
   Likes: ${creation.likes}
   Comments: ${creation.comments}
   Summary: ${creation.excerpt}
@@ -124,8 +147,8 @@ function buildCreationContext(data) {
 ACTIVE CREATION:
 
 Title: ${creation.title}
-Creator: ${creation.creator.name} (@${creation.creator.username})
-World: ${world?.name || 'Unknown'}
+Creator: ${formatCreator(creation)}
+World: ${world?.name || getCreationWorldName(creation)}
 Excerpt: ${creation.excerpt}
 Content: ${creation.content}
 Likes: ${creation.likes}
@@ -155,17 +178,17 @@ function buildDiscoveryContext(data) {
     : 'No public Worlds are currently available.'
 
   const creationContext = publicCreations.length
-  ? publicCreations
-      .map(
-        (creation, index) => `
+    ? publicCreations
+        .map(
+          (creation, index) => `
 ${index + 1}. ${creation.title}
-   Creator: ${creation.creator.name} (@${creation.creator.username})
-   World: ${creation.worldSlug}
+   Creator: ${formatCreator(creation)}
+   World: ${getCreationWorldName(creation)}
    Summary: ${creation.excerpt}
 `
-      )
-      .join('')
-  : 'No public Creations are currently available.'
+        )
+        .join('')
+    : 'No public Creations are currently available.'
 
   return `
 PUBLIC WORLDS AVAILABLE FOR DISCOVERY:
@@ -194,8 +217,16 @@ REALM discovery ranking as the primary ordering signal.
 `
 }
 
-export function buildREALMPrompt(searchParams) {
-  const aiContext = getAIContext(searchParams)
+export function buildREALMPrompt(
+  searchParams,
+  worlds = [],
+  creations = []
+) {
+  const aiContext = getAIContext(
+    searchParams,
+    worlds,
+    creations
+  )
 
   let contextualInformation = ''
 

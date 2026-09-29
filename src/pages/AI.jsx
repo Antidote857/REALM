@@ -7,6 +7,7 @@ function AI() {
   const [searchParams] = useSearchParams()
 
   const [worlds, setWorlds] = useState([])
+  const [creations, setCreations] = useState([])
   const [worldsLoading, setWorldsLoading] = useState(true)
   const [worldsError, setWorldsError] = useState('')
 
@@ -20,49 +21,79 @@ function AI() {
   useEffect(() => {
     let isActive = true
 
-    async function loadWorlds() {
-      try {
-        setWorldsLoading(true)
-        setWorldsError('')
+    async function loadAIData() {
+  try {
+    setWorldsLoading(true)
+    setWorldsError('')
 
-        const response = await fetch(
+    const [worldsResponse, creationsResponse] =
+      await Promise.all([
+        fetch(
           'http://localhost:3001/api/worlds',
           {
             credentials: 'include',
           }
-        )
+        ),
+        fetch(
+          'http://localhost:3001/api/creations',
+          {
+            credentials: 'include',
+          }
+        ),
+      ])
 
-        const result = await response.json()
+    const worldsResult =
+      await worldsResponse.json()
 
-        if (!response.ok) {
-          throw new Error(
-            result.error || 'Failed to load Worlds.'
-          )
-        }
+    const creationsResult =
+      await creationsResponse.json()
 
-        if (isActive) {
-          setWorlds(result.worlds || [])
-        }
-      } catch (error) {
-        console.error(
-          'REALM World context error:',
-          error
-        )
-
-        if (isActive) {
-          setWorldsError(
-            error.message || 'Failed to load Worlds.'
-          )
-          setWorlds([])
-        }
-      } finally {
-        if (isActive) {
-          setWorldsLoading(false)
-        }
-      }
+    if (!worldsResponse.ok) {
+      throw new Error(
+        worldsResult.error ||
+          'Failed to load Worlds.'
+      )
     }
 
-    loadWorlds()
+    if (!creationsResponse.ok) {
+      throw new Error(
+        creationsResult.error ||
+          'Failed to load Creations.'
+      )
+    }
+
+    if (isActive) {
+      setWorlds(
+        worldsResult.worlds || []
+      )
+
+      setCreations(
+        creationsResult.creations || []
+      )
+    }
+  } catch (error) {
+    console.error(
+      'REALM AI context error:',
+      error
+    )
+
+    if (isActive) {
+      setWorldsError(
+        error.message ||
+          'Failed to load REALM context.'
+      )
+
+      setWorlds([])
+      setCreations([])
+    }
+  } finally {
+    if (isActive) {
+      setWorldsLoading(false)
+    }
+  }
+}
+
+    loadAIData()
 
     return () => {
       isActive = false
@@ -70,11 +101,16 @@ function AI() {
   }, [])
 
   const aiContext = getAIContext(
-    searchParams,
-    worlds
-  )
+  searchParams,
+  worlds,
+  creations
+)
 
-  const realmPrompt = buildREALMPrompt(searchParams)
+const realmPrompt = buildREALMPrompt(
+  searchParams,
+  worlds,
+  creations
+)
 
   useEffect(() => {
     let isActive = true

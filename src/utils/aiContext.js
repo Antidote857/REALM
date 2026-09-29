@@ -1,4 +1,3 @@
-import { getCreations } from '../data/creationStore'
 import { discoverCreations } from './discovery'
 
 function getPublicWorlds(worlds) {
@@ -20,9 +19,11 @@ function buildGlobalContext(worlds, creations) {
   }
 }
 
-export function getAIContext(searchParams, worlds = []) {
-  const creations = getCreations()
-
+export function getAIContext(
+  searchParams,
+  worlds = [],
+  creations = []
+) {
   const context = searchParams.get('context')
   const slug = searchParams.get('slug')
   const creationId = searchParams.get('id')
@@ -77,7 +78,8 @@ export function getAIContext(searchParams, worlds = []) {
 
   if (context === 'creation') {
     const creation = creations.find(
-      (item) => item.id === creationId
+      (item) =>
+        String(item.id) === String(creationId)
     )
 
     if (
@@ -94,9 +96,13 @@ export function getAIContext(searchParams, worlds = []) {
       }
     }
 
-    const world = worlds.find(
-      (item) => item.slug === creation.worldSlug
-    )
+    const world =
+      worlds.find(
+        (item) =>
+          item.slug === creation.worldSlug ||
+          String(item.id) === String(creation.worldId)
+      ) ||
+      null
 
     return {
       type: 'creation',
@@ -106,7 +112,7 @@ export function getAIContext(searchParams, worlds = []) {
         `AI focused on the Creation "${creation.title}".`,
       data: {
         creation,
-        world: world || null,
+        world,
       },
     }
   }

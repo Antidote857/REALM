@@ -275,6 +275,39 @@ REALM discovery ranking as the primary ordering signal.
 `
 }
 
+function buildContextInstructions(aiContext) {
+  if (aiContext.type === 'world') {
+    return `
+WORLD-SPECIFIC AI INSTRUCTIONS:
+
+You are the AI intelligence layer for the active World.
+
+Treat the active World as your primary knowledge environment.
+
+Prioritize the World's purpose, description, and public Creations when
+answering questions.
+
+Use the Creations collectively to understand the knowledge, ideas,
+projects, themes, and activity developing inside this World.
+
+When useful, connect information across multiple Creations to explain
+patterns, relationships, shared topics, and differences.
+
+Keep answers focused on the active World unless the user clearly asks
+for broader general knowledge.
+
+Do not claim that knowledge, activity, members, or Creations exist in
+this World unless they are present in the supplied World context.
+
+If the World context does not contain enough information to answer a
+World-specific question, clearly say that the information is not
+currently available in this World.
+`
+  }
+
+  return ''
+}
+
 export function buildREALMPrompt(
   searchParams,
   worlds = [],
@@ -289,6 +322,9 @@ export function buildREALMPrompt(
   )
 
   let contextualInformation = ''
+
+  const contextInstructions =
+  buildContextInstructions(aiContext)
 
   if (aiContext.type === 'global') {
     contextualInformation = buildGlobalContext(
@@ -326,6 +362,8 @@ Title: ${aiContext.title}
 Description: ${aiContext.description}
 
 ${contextualInformation}
+
+${contextInstructions}
 
 INSTRUCTION:
 

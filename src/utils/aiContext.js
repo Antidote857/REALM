@@ -48,11 +48,7 @@ export function getAIContext(
       (item) => item.slug === slug
     )
 
-    const relatedCreations = publicCreations.filter(
-      (item) =>
-        item.worldSlug === creation.worldSlug &&
-        String(item.id) !== String(creation.id)
-    )
+    
 
     if (!world || world.visibility !== 'public') {
       return {
